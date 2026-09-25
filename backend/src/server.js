@@ -1,11 +1,14 @@
-import { createApp } from './app.js';
-import { env } from './config/env.js';
-import { pool } from './config/database.js';
-import { logger } from './utils/logger.js';
+import { createApp } from "./app.js";
+import { env } from "./config/env.js";
+import { pool } from "./config/database.js";
+import { logger } from "./utils/logger.js";
 
 const app = createApp();
-const server = app.listen(env.PORT, () => {
-  logger.info('Backend server started', { port: env.PORT, environment: env.NODE_ENV });
+const server = app.listen(env.PORT, "0.0.0.0", () => {
+  logger.info("Backend server started", {
+    port: env.PORT,
+    environment: env.NODE_ENV,
+  });
 });
 
 async function shutdown(signal) {
@@ -16,5 +19,5 @@ async function shutdown(signal) {
   });
 }
 
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
