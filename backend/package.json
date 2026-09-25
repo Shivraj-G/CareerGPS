@@ -9,6 +9,8 @@
     "start": "node src/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "migrate": "node scripts/migrate.js",
+    "seed": "node scripts/seed.js",
     "check": "node --check src/server.js && node --check src/app.js"
   },
   "dependencies": {
