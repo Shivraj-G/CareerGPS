@@ -13,6 +13,7 @@ import pathwayRoutes from '../modules/pathways/pathway.routes.js';
 import eligibilityRoutes from '../modules/eligibility/eligibility.routes.js';
 import { opportunityRequirementRoutes, adminOpportunityRequirementRoutes } from '../modules/eligibility/opportunity-requirement.routes.js';
 import opportunityRoutes from '../modules/opportunities/opportunity.routes.js';
+import assistantRoutes from '../modules/assistant/assistant.routes.js';
 
 const router = Router();
 router.use('/health', healthRoutes);
@@ -28,6 +29,7 @@ router.use('/recommendations', recommendationRoutes);
 router.use('/pathways', pathwayRoutes);
 router.use('/eligibility', eligibilityRoutes);
 router.use('/opportunities', opportunityRoutes);
+router.use('/assistant', assistantRoutes);
 router.use('/opportunities', opportunityRequirementRoutes);
 router.use('/admin/opportunities', adminOpportunityRequirementRoutes);
 export default router;
