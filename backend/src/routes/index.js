@@ -1,7 +1,20 @@
 import { Router } from 'express';
 import healthRoutes from './health.routes.js';
+import authRoutes from '../modules/auth/auth.routes.js';
+import userRoutes from '../modules/users/user.routes.js';
+import profileRoutes from '../modules/profiles/profile.routes.js';
+import careerRoutes from '../modules/careers/career.routes.js';
+import skillRoutes from '../modules/skills/skill.routes.js';
+import courseRoutes from '../modules/courses/course.routes.js';
+import institutionRoutes from '../modules/institutions/institution.routes.js';
 
 const router = Router();
 router.use('/health', healthRoutes);
-
+router.use('/auth', authRoutes);
+router.use('/users', userRoutes);
+router.use('/profiles', profileRoutes);
+router.use('/careers', careerRoutes);
+router.use('/skills', skillRoutes);
+router.use('/courses', courseRoutes);
+router.use('/institutions', institutionRoutes);
 export default router;
