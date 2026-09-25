@@ -7,6 +7,8 @@ import careerRoutes from '../modules/careers/career.routes.js';
 import skillRoutes from '../modules/skills/skill.routes.js';
 import courseRoutes from '../modules/courses/course.routes.js';
 import institutionRoutes from '../modules/institutions/institution.routes.js';
+import skillIntelligenceRoutes from '../modules/skills/skill-intelligence.routes.js';
+import recommendationRoutes from '../modules/recommendations/recommendation.routes.js';
 
 const router = Router();
 router.use('/health', healthRoutes);
@@ -14,7 +16,9 @@ router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/profiles', profileRoutes);
 router.use('/careers', careerRoutes);
+router.use('/skills', skillIntelligenceRoutes);
 router.use('/skills', skillRoutes);
 router.use('/courses', courseRoutes);
 router.use('/institutions', institutionRoutes);
+router.use('/recommendations', recommendationRoutes);
 export default router;

@@ -8,7 +8,9 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().min(1).default('http://localhost:5173'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug']).default('info'),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
-  JWT_ACCESS_EXPIRES_IN: z.string().default('15m')
+  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
+  AI_SERVICE_URL: z.string().url().optional(),
+  INTERNAL_SERVICE_TOKEN: z.string().min(16).optional()
 });
 
 const parsed = envSchema.safeParse(process.env);

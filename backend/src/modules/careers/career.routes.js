@@ -52,4 +52,32 @@ router.get('/:careerId/courses', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+router.get('/:careerId/pathways', async (req, res, next) => {
+  try {
+    const result = await pool.query(`SELECT p.id, p.title, p.description, p.record_status, p.verification_status, p.source_url, p.verified_at FROM pathways p WHERE p.career_id = $1 AND p.record_status = 'published' ORDER BY p.title`, [req.params.careerId]);
+    res.json({ data: result.rows });
+  } catch (e) { next(e); }
+});
+
+router.get('/:careerId/opportunities', async (req, res, next) => {
+  try {
+    const result = await pool.query(`SELECT o.id, o.title, o.organization, o.location, o.opportunity_type, o.status, o.application_deadline, o.verification_status, o.source_url, o.verified_at FROM career_opportunities co JOIN opportunities o ON o.id = co.opportunity_id WHERE co.career_id = $1 AND o.record_status = 'published' ORDER BY o.application_deadline NULLS LAST, o.title`, [req.params.careerId]);
+    res.json({ data: result.rows });
+  } catch (e) { next(e); }
+});
+
+router.get('/:careerId/related', async (req, res, next) => {
+  try {
+    const result = await pool.query(`SELECT DISTINCT c2.id, c2.title, c2.description FROM career_skills cs1 JOIN career_skills cs2 ON cs1.skill_id = cs2.skill_id AND cs2.career_id <> cs1.career_id JOIN careers c2 ON c2.id = cs2.career_id WHERE cs1.career_id = $1 AND c2.record_status = 'published' ORDER BY c2.title LIMIT 20`, [req.params.careerId]);
+    res.json({ data: result.rows });
+  } catch (e) { next(e); }
+});
+
+router.get('/:careerId/sources', async (req, res, next) => {
+  try {
+    const result = await pool.query(`SELECT se.field_name, sd.source_url, sd.document_url AS source_document_url, se.evidence_text, se.reference_locator, se.review_status, se.created_at FROM source_evidence se JOIN source_documents sd ON sd.id = se.source_document_id WHERE se.entity_type = 'career' AND se.entity_id = $1 ORDER BY se.created_at DESC`, [req.params.careerId]);
+    res.json({ data: result.rows });
+  } catch (e) { next(e); }
+});
+
 export default router;
