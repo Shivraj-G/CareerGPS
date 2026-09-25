@@ -6,6 +6,7 @@ import apiRoutes from './routes/index.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { notFoundHandler } from './middleware/notFound.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { internalIngestionRoutes } from './modules/ingestion/ingestion.routes.js';
 
 export function createApp() {
   const app = express();
@@ -25,6 +26,7 @@ export function createApp() {
   });
 
   app.use('/api/v1', apiRoutes);
+  app.use('/internal/v1/ingestion', internalIngestionRoutes);
   app.use(notFoundHandler);
   app.use(errorHandler);
 
