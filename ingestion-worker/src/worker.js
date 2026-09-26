@@ -1,15 +1,12 @@
 import 'dotenv/config';
 import crypto from 'node:crypto';
+import { isUuid, stripHtml, extractOpportunity } from './extract.js';
 
 const backendUrl = (process.env.BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
 const token = process.env.INTERNAL_SERVICE_TOKEN;
 const sourceId = process.env.INGESTION_SOURCE_ID;
 const runId = process.env.INGESTION_RUN_ID;
 const sourceUrl = process.env.SOURCE_URL;
-
-function isUuid(value) {
-  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
 const extractionVersion = process.env.EXTRACTION_VERSION || 'phase8-v1';
 const timeoutMs = Number(process.env.REQUEST_TIMEOUT_MS || 15000);
 
@@ -23,55 +20,6 @@ if (!isUuid(sourceId) || !isUuid(runId)) {
   console.error(`INGESTION_SOURCE_ID=${sourceId}`);
   console.error(`INGESTION_RUN_ID=${runId}`);
   process.exit(1);
-}
-
-function stripHtml(html) {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function meta(html, name) {
-  const re = new RegExp(`<meta[^>]+(?:name|property)=["']${name}["'][^>]+content=["']([^"']*)["'][^>]*>`, 'i');
-  return html.match(re)?.[1]?.trim() || null;
-}
-
-function titleFromHtml(html) {
-  return html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/\s+/g, ' ').trim() || null;
-}
-
-function extractOpportunity(html, finalUrl) {
-  const text = stripHtml(html);
-  const title = meta(html, 'og:title') || titleFromHtml(html);
-  const deadlineMatch = text.match(/(?:last date|application deadline|closing date|deadline)\s*[:\-]?\s*([0-9]{1,2}[\/-][0-9]{1,2}[\/-][0-9]{2,4})/i);
-  const advertisementMatch = text.match(/(?:advertisement|advt\.?|notification)\s*(?:no\.?|number)?\s*[:\-]?\s*([A-Z0-9\/-]{3,})/i);
-  const location = /\bgoa\b/i.test(text) ? 'Goa' : null;
-
-  return {
-    title,
-    organization: meta(html, 'author') || null,
-    advertisement_number: advertisementMatch?.[1] || null,
-    location,
-    vacancies_total: null,
-    application_deadline: deadlineMatch?.[1] || null,
-    application_opening: null,
-    description: text.slice(0, 5000) || null,
-    requirements: [],
-    career_ids: [],
-    source_url: finalUrl,
-    source_document_url: finalUrl,
-    status: 'unknown',
-    opportunity_type: 'government',
-    extraction_status: 'needs_review'
-  };
 }
 
 async function request(path, options = {}) {
@@ -130,10 +78,12 @@ async function main() {
           title: null, organization: null, advertisement_number: null, location: null,
           vacancies_total: null, application_deadline: null, application_opening: null,
           requirements: [], career_ids: [], source_url: response.url, source_document_url: response.url,
-          status: 'unknown', opportunity_type: 'government', description: null,
-          extraction_status: 'needs_review'
+          status: 'unknown', opportunity_type: 'government', description: null
         };
 
+    // Confirmed contract (sample from backend teammate): candidate has only
+    // candidate_data + extraction_status as siblings — no entity_type or
+    // extraction_version at this level. document includes published_at.
     await request('/internal/v1/ingestion/candidates', {
       method: 'POST',
       body: JSON.stringify({
@@ -144,13 +94,12 @@ async function main() {
           document_title: candidateData.title,
           content_hash: hash,
           fetched_at: new Date().toISOString(),
+          published_at: null, // worker cannot determine a source's original publish date from HTML alone
           raw_text: rawText,
           extraction_version: extractionVersion
         },
         candidate: {
-          entity_type: 'opportunity',
           candidate_data: candidateData,
-          extraction_version: extractionVersion,
           extraction_status: 'needs_review'
         }
       })
@@ -165,6 +114,12 @@ async function main() {
     console.error('Ingestion failed:', error.message);
     if (error.message.includes('INGESTION_RUN_NOT_ACTIVE')) {
       console.error('The configured INGESTION_RUN_ID is no longer active. Create a NEW ingestion run and update INGESTION_RUN_ID in ingestion-worker/.env before retrying.');
+    }
+    if (error.message.includes('SOURCE_NOT_APPROVED')) {
+      console.error('The configured source is not approved yet. An admin must approve it via POST /api/v1/admin/sources (or PATCH to approve) before ingestion can run.');
+    }
+    if (error.message.includes('DUPLICATE_OPPORTUNITY')) {
+      console.error('A matching opportunity already exists for this source. Check the review queue / existing published record instead of re-submitting.');
     }
     if (error.message.includes('Source fetch failed') || error.message.includes('Source fetch timed out')) {
       console.error(`Check SOURCE_URL in ingestion-worker/.env. It must be a reachable public official source: ${sourceUrl}`);

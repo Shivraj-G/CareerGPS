@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
-app = FastAPI(title="Goa Career Intelligence AI Service", version="0.2.0")
+app = FastAPI(title="Goa Career Intelligence AI Service", version="0.3.0")
 TOKEN = os.getenv("INTERNAL_SERVICE_TOKEN")
 
 
@@ -22,6 +22,23 @@ class PathwayReasonRequest(BaseModel):
 class EligibilityExplainRequest(BaseModel):
     outcome: str
     results: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class RecommendationRequest(BaseModel):
+    profile: dict[str, Any] = Field(default_factory=dict)
+    skills: list[dict[str, Any]] = Field(default_factory=list)
+    careers: list[dict[str, Any]] = Field(default_factory=list)
+    goal: str | None = None
+    preferences: dict[str, Any] = Field(default_factory=dict)
+    limit: int = 5
+
+
+class SkillGapExplainRequest(BaseModel):
+    career: dict[str, Any] = Field(default_factory=dict)
+    user_skills: list[dict[str, Any]] = Field(default_factory=list)
+    required_skills: list[dict[str, Any]] = Field(default_factory=list)
+    matched_skills: list[dict[str, Any]] = Field(default_factory=list)
+    missing_skills: list[dict[str, Any]] = Field(default_factory=list)
 
 
 @app.get("/internal/v1/health")
@@ -56,6 +73,99 @@ def eligibility_explain(request: EligibilityExplainRequest, x_internal_service_t
     else:
         text = f"The structured check could not determine all requirements ({unknown} unresolved). Verify the missing or unstructured information before drawing a conclusion."
     return {"explanation": text}
+
+
+@app.post("/internal/v1/recommendations/careers")
+def recommendations_careers(request: RecommendationRequest, x_internal_service_token: str | None = Header(default=None)):
+    check_token(x_internal_service_token)
+
+    user_skill_ids = {s.get("id") for s in request.skills if s.get("id")}
+    goal = request.goal or request.profile.get("career_goal")
+
+    scored: list[dict[str, Any]] = []
+    for candidate in request.careers:
+        # Never fabricate a candidate — only ever score/return what Node supplied.
+        candidate_id = candidate.get("id")
+        if candidate_id is None:
+            continue
+
+        # Match on skill_id, not name — the confirmed payload gives both sides a
+        # stable id, which avoids casing/typo mismatches a name-string match risks.
+        # importance="required" (the confirmed value) is weighted higher; this only
+        # emphasizes what Node already sent, it doesn't add a new requirement.
+        weighted_matches: list[tuple[str, int]] = []
+        for entry in candidate.get("required_skills", []):
+            skill_id = entry.get("skill_id")
+            if skill_id and skill_id in user_skill_ids:
+                weight = 2 if entry.get("importance") == "required" else 1
+                weighted_matches.append((entry.get("name", skill_id), weight))
+
+        score = sum(weight for _, weight in weighted_matches)
+        matched_names = sorted({name for name, _ in weighted_matches})
+
+        reasons = []
+        if matched_names:
+            reasons.append(f"matches on {', '.join(matched_names)}")
+        else:
+            reasons.append("included as a structurally available option; no strong skill overlap found")
+
+        title = candidate.get("title")
+        if goal and title and goal.strip().lower() == title.strip().lower():
+            reasons.append(f"directly matches your stated goal of {goal}")
+            score += 1  # small nudge toward a stated goal — not a fabricated requirement
+
+        scored.append({
+            "career_id": candidate_id,
+            "title": title,
+            "score": score,
+            "reasoning": "; ".join(reasons) + ".",
+        })
+
+    scored.sort(key=lambda item: item["score"], reverse=True)
+    top = scored[: max(request.limit, 0)]
+
+    return {
+        "recommendations": top,
+        "considered": len(request.careers),
+        "grounded": len(top) > 0,
+    }
+
+
+@app.post("/internal/v1/skills/gap-analysis")
+def skills_gap_analysis(request: SkillGapExplainRequest, x_internal_service_token: str | None = Header(default=None)):
+    check_token(x_internal_service_token)
+
+    career_title = request.career.get("title") or "this career"
+
+    if not request.required_skills:
+        explanation = f"No structured skill requirements are recorded for {career_title} yet, so a gap cannot be explained."
+    elif not request.missing_skills:
+        explanation = f"Your recorded skills cover every listed requirement for {career_title}."
+    else:
+        # Node already computed matched/missing — Python only explains it,
+        # using the confirmed "importance" field to prioritize the wording.
+        required_missing = [s.get("skill_name") for s in request.missing_skills if s.get("importance") == "required"]
+        other_missing = [s.get("skill_name") for s in request.missing_skills if s.get("importance") != "required"]
+
+        parts = []
+        if required_missing:
+            parts.append(f"required skill(s) still missing: {', '.join(required_missing)}")
+        if other_missing:
+            parts.append(f"additional recommended skill(s) not yet listed: {', '.join(other_missing)}")
+
+        explanation = (
+            f"To meet the listed requirements for {career_title}, the following applies — "
+            + "; ".join(parts)
+            + ". This reflects the structured requirement list as recorded; it is not a re-derived or AI-estimated requirement."
+        )
+
+    return {
+        "explanation": explanation,
+        "missing_skills": request.missing_skills,
+        "matched_count": len(request.matched_skills),
+        "required_count": len(request.required_skills),
+    }
+
 
 class AssistantRequest(BaseModel):
     question: str

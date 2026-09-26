@@ -3,11 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "dotenv": "^16.4.7"
   },
   "scripts": {
-    "ingest": "node src/worker.js"
+    "ingest": "node src/worker.js",
+    "test" : "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.2"
   }
 }
