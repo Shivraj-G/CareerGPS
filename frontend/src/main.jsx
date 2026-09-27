@@ -788,9 +788,9 @@ function Dashboard() {
 
   return (
     <AppShell><div className="dashboard">
-      <div className="page-heading-row"><div><div className="section-kicker">DASHBOARD</div><h1>Good morning{getLocalName(user?.id) ? `, ${getLocalName(user?.id).split(" ")[0]}` : ""} <span>👋</span></h1><p>Here's a quick overview of your career journey.</p></div><button className="btn outline" onClick={() => navigate("/profile")}><UserRound size={16}/> Edit Profile</button></div>
+      <div className="page-heading-row"><div><div className="section-kicker">DASHBOARD</div><h1>Hello {user?.name || user?.full_name || (user?.email ? user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1) : "")}</h1><p>Here's a quick overview of your career journey.</p></div><button className="btn outline" onClick={() => navigate("/profile")}><UserRound size={16}/> Edit Profile</button></div>
       {goalText ? (
-        <div className="goal-card"><div><span className="label">YOUR CURRENT GOAL</span><h2>{goalText}</h2><Link to="/careers">Explore matching careers <ArrowRight size={14}/></Link></div></div>
+        <div className="goal-card"><div><span className="label">YOUR CURRENT GOAL</span><h2>{goalText}</h2><Link to={`/careers?search=${encodeURIComponent(goalText)}`}>Explore matching careers <ArrowRight size={14}/></Link></div></div>
       ) : (
         <div className="goal-card"><div><span className="label">YOUR CURRENT GOAL</span><h2>Not set yet</h2><Link to="/profile">Set a career goal <ArrowRight size={14}/></Link></div></div>
       )}
@@ -1513,7 +1513,7 @@ function Profile() {
         const p = unwrapObject(profileRes.value);
         const edu = Array.isArray(p.education) && p.education.length ? p.education[0] : {};
         setForm({
-          localName: getLocalName(),
+          localName: user?.name || user?.full_name || p.name || p.full_name || (user?.email ? user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1) : ""),
           email: user?.email ?? "",
           qualification: edu.qualification ?? "BCA",
           educationStatus: edu.status ? edu.status.charAt(0).toUpperCase() + edu.status.slice(1) : "Pursuing",
