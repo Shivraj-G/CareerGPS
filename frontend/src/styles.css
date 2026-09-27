@@ -86,3 +86,48 @@ h1,h2,h3{font-family:Manrope,Arial,sans-serif;margin:0} p{line-height:1.55}.mute
   .assistant-fab{left:16px;bottom:16px;width:48px;height:48px}
   .assistant-panel{left:8px;right:8px;bottom:74px;width:auto;max-width:none;height:calc(100vh - 110px)}
 }
+
+/* --- UI/UX Polish Animations --- */
+.page-content { animation: pageEnter 0.25s ease-out forwards; }
+@keyframes pageEnter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.sidebar nav a { transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease; }
+.sidebar nav a:hover:not(.active) { background: #f7f9fc; color: #3b4556; }
+.sidebar nav a:hover { transform: translateX(2px); }
+.dashboard > * { animation: dashEnter 0.3s ease-out forwards; opacity: 0; }
+@keyframes dashEnter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.dashboard > *:nth-child(1) { animation-delay: 0ms; }
+.dashboard > *:nth-child(2) { animation-delay: 50ms; }
+.dashboard > *:nth-child(3) { animation-delay: 100ms; }
+.dashboard > *:nth-child(4) { animation-delay: 150ms; }
+.dashboard > *:nth-child(5) { animation-delay: 200ms; }
+.dashboard > *:nth-child(6) { animation-delay: 250ms; }
+.btn { transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease; }
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(1px); }
+.action-card, .career-row, .rec-item, .opportunity-card, .institution-card, .saved-card { transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+.action-card:hover, .career-row:hover, .rec-item:hover, .opportunity-card:hover, .institution-card:hover, .saved-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(31,67,125,.06); }
+.chip { transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease; }
+.chip:hover { transform: scale(1.02); }
+.path-step { animation: stepEnter 0.3s ease-out forwards; opacity: 0; }
+@keyframes stepEnter { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+.path-step:nth-child(1) { animation-delay: 0ms; }
+.path-step:nth-child(2) { animation-delay: 75ms; }
+.path-step:nth-child(3) { animation-delay: 150ms; }
+.path-step:nth-child(4) { animation-delay: 225ms; }
+.path-step:nth-child(5) { animation-delay: 300ms; }
+.path-step:nth-child(6) { animation-delay: 375ms; }
+.path-step:nth-child(7) { animation-delay: 450ms; }
+.path-step:nth-child(n+8) { animation-delay: 500ms; }
+.progress i { transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+.assistant-fab { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease; }
+.assistant-fab:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 12px 28px rgba(37,99,235,.4); }
+@keyframes popIn { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+.assistant-panel { animation: slideUpFade 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; transform-origin: bottom right; }
+@keyframes slideUpFade { from { opacity: 0; transform: translateY(15px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.skeleton { background: linear-gradient(90deg, #f0f3f7 25%, #e1e6eb 50%, #f0f3f7 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite linear; border-radius: 4px; }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+.skel-title { width: 40%; height: 16px; margin-bottom: 8px; }
+.skel-text { width: 80%; height: 12px; margin-bottom: 4px; }
+.loading-pulse svg { animation: gentlePulse 2s infinite ease-in-out; }
+@keyframes gentlePulse { 0%, 100% { opacity: 0.5; transform: scale(0.95); } 50% { opacity: 1; transform: scale(1.05); } }
+@media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }

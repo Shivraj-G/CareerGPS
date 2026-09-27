@@ -177,8 +177,11 @@ function AuthProvider({ children }) {
 /* ---------------------------------------------------------------------
  * Shared loading / error states
  * ------------------------------------------------------------------- */
-function LoadingState({ label = "Loading..." }) {
-  return <div className="empty-state"><Clock3 size={24}/><h2>{label}</h2></div>;
+function LoadingState({ label = "Loading...", layout }) {
+  if (layout === "list") return <div className="skeleton-list" style={{display:"grid",gap:"9px"}}>{[1,2,3,4].map(i => <div key={i} className="career-row"><div className="career-image skeleton" style={{width:"78px",height:"68px"}}></div><div className="career-row-main"><div className="skeleton skel-title"></div><div className="skeleton skel-text"></div></div></div>)}</div>;
+  if (layout === "grid") return <div className="institution-grid" style={{marginBottom:"20px"}}>{[1,2,3,4,5,6].map(i => <div key={i} className="institution-card"><div className="institution-image skeleton" style={{height:"120px"}}></div><div className="skeleton skel-title"></div><div className="skeleton skel-text"></div></div>)}</div>;
+  if (layout === "profile") return <div className="profile-grid" style={{marginBottom:"20px"}}><div className="panel"><div className="skeleton skel-title" style={{height:"24px"}}></div><div className="skeleton skel-text" style={{marginTop:"15px"}}></div><div className="skeleton skel-text"></div></div><div className="panel"><div className="skeleton skel-title" style={{height:"24px"}}></div><div className="skeleton skel-text" style={{marginTop:"15px"}}></div></div></div>;
+  return <div className="empty-state loading-pulse"><Clock3 size={24}/><h2>{label}</h2></div>;
 }
 // Central error-state rendering: every major API-driven page in this file
 // funnels its caught ApiError into this one component, so the copy for
@@ -332,7 +335,11 @@ function AssistantWidget() {
           {!loadingConvo && messages.length === 0 && <div className="assistant-empty"><Sparkles size={20}/><p>Ask about careers, pathways, courses or opportunities in Goa. Answers are grounded in CareerGPS's own data - if something isn't known, the assistant will say so instead of guessing.</p></div>}
           {messages.map((m, i) => (
             <div className={`assistant-msg ${m.role}`} key={m.id ?? i}>
-              <div className="assistant-bubble">{m.content}</div>
+              <div className="assistant-bubble">{(m.content || "").split("\n").map((line, li) => {
+                // Render **bold** text and plain lines
+                const parts = line.split(/(\*\*[^*]+\*\*)/g);
+                return <span key={li}>{parts.map((p, pi) => p.startsWith("**") && p.endsWith("**") ? <strong key={pi}>{p.slice(2, -2)}</strong> : p)}{li < (m.content || "").split("\n").length - 1 ? <br/> : null}</span>;
+              })}</div>
               {import.meta.env.DEV && m.content?.includes("assistant service is currently unavailable") && (
                 <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Dev Diagnostic: Backend reached, but the AI service did not return a generated response.</div>
               )}
@@ -420,14 +427,7 @@ function AppShell({ children }) {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="mini-help">
-            <div className="help-icon"><Sparkles size={16}/></div>
-            <div>
-              <strong>Need guidance?</strong>
-              <span>Ask Career AI</span>
-            </div>
-            <ArrowRight size={15}/>
-          </div>
+
           <button className="side-user" onClick={logout} title="Log out" style={{ border: 0, width: "100%", textAlign: "left", cursor: "pointer", background: "transparent" }}>
             <div className="avatar">{(getLocalName(user?.id) || user?.email || "?").charAt(0).toUpperCase()}</div>
             <div><strong>{getLocalName(user?.id) || user?.email || "Guest"}</strong><span>{user?.role || "Log out"}</span></div>
@@ -448,7 +448,7 @@ function AppShell({ children }) {
             <Link to="/opportunities">Opportunities</Link>
           </div>
           <div className="top-actions">
-            <button className="icon-btn"><Search size={18}/></button>
+
             <button className="icon-btn"><Bell size={18}/></button>
             <div className="avatar small">{(getLocalName(user?.id) || user?.email || "?").charAt(0).toUpperCase()}</div>
           </div>
@@ -788,7 +788,7 @@ function Dashboard() {
 
   return (
     <AppShell><div className="dashboard">
-      <div className="page-heading-row"><div><div className="section-kicker">DASHBOARD</div><h1>Hello {user?.name || user?.full_name || (user?.email ? user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1) : "")}</h1><p>Here's a quick overview of your career journey.</p></div><button className="btn outline" onClick={() => navigate("/profile")}><UserRound size={16}/> Edit Profile</button></div>
+      <div className="page-heading-row"><div><div className="section-kicker">DASHBOARD</div><h1>Hello {(() => { const localName = getLocalName(user?.id); const displayName = localName || user?.name || user?.full_name || ""; if (displayName) return displayName.trim().split(/\s+/)[0]; if (user?.email) { const prefix = user.email.split("@")[0]; return prefix.charAt(0).toUpperCase() + prefix.slice(1); } return "there"; })()}</h1><p>Here's a quick overview of your career journey.</p></div><button className="btn outline" onClick={() => navigate("/profile")}><UserRound size={16}/> Edit Profile</button></div>
       {goalText ? (
         <div className="goal-card"><div><span className="label">YOUR CURRENT GOAL</span><h2>{goalText}</h2><Link to={`/careers?search=${encodeURIComponent(goalText)}`}>Explore matching careers <ArrowRight size={14}/></Link></div></div>
       ) : (
@@ -881,7 +881,8 @@ function Careers() {
     try {
       const res = await api.recommendCareers({});
       const data = unwrapObject(res);
-      setRecommendation({ id: data.recommendation_id, results: (data.results || []).map(normalizeRecommendationResult) });
+      const rawResults = data.results || data.recommendations || data.data || [];
+      setRecommendation({ id: data.recommendation_id || data.id, results: Array.isArray(rawResults) ? rawResults.map(normalizeRecommendationResult) : [] });
     } catch (err) {
       setRecError(err);
     } finally {
@@ -917,7 +918,7 @@ function Careers() {
             <div><b>{r.title}</b>{r.reasoning && <span>{r.reasoning}</span>}{r.missingSkills?.length > 0 && <span>Skills to build: {r.missingSkills.map(s => s.skill ?? s.name ?? s).join(", ")}</span>}</div>
             {r.careerId && <Link className="btn outline" to={`/careers/${r.careerId}`}>View <ArrowRight size={14}/></Link>}
           </div>
-        )) : <p className="muted">The recommendation service didn't return any specific careers this time.</p>}
+        )) : <p className="muted">No specific career matches were returned for your profile yet. You can explore all careers below.</p>}
       </div>
     )}
 
@@ -928,7 +929,7 @@ function Careers() {
       </aside>
       <div className="results">
         {status === "ready" && <div className="results-top"><span>Showing <b>{careers.length}</b> careers</span></div>}
-        {status === "loading" && <LoadingState label="Loading careers..."/>}
+        {status === "loading" && <LoadingState label="Loading careers..." layout="list"/>}
         {status === "error" && <ErrorState text={error?.message} status={error?.status} onRetry={() => load(query)}/>}
         {status === "ready" && (careers.length ? careers.map(c => <CareerRow c={c} key={c.id}/>) : <EmptyState title="No careers matched that search" text="Try a career title or a skill such as SQL or Python." action="Clear search" onAction={() => runSearch("")}/>)}
       </div>
@@ -1332,7 +1333,7 @@ function Opportunities() {
     <div className="page-heading-row"><div><div className="section-kicker">OPPORTUNITIES</div><h1>Jobs, internships & programmes</h1><p>Explore opportunities and verify the official notice before applying.</p></div></div>
     <div className="tabs opportunity-tabs"><a className={closingSoon ? "" : "active"} onClick={() => setClosingSoon(false)} style={{ cursor: "pointer" }}>All opportunities</a><a className={closingSoon ? "active" : ""} onClick={() => setClosingSoon(true)} style={{ cursor: "pointer" }}>Closing soon</a></div>
     {filterBar}
-    {status === "loading" && <LoadingState label="Loading opportunities..."/>}
+    {status === "loading" && <LoadingState label="Loading opportunities..." layout="list"/>}
     {status === "error" && <ErrorState text={error?.message} status={error?.status}/>}
     {status === "ready" && (visible.length
       ? <div className="opportunity-list">{visible.map(o => <Link className="opportunity-card" to={`/opportunities/${o.id}`} key={o.id}><div className="opp-logo"><Building2/></div><div className="opp-main"><div className="opp-top"><span className={`status-pill ${o.status.toLowerCase()}`}>{o.status}</span><span>{o.type}</span></div><h2>{o.title}</h2><p><Building2 size={14}/>{o.org} · <MapPin size={14}/>{o.location}</p><div className="opp-meta"><span><CalendarDays/> Deadline: <b>{o.deadline}</b></span></div></div><ArrowRight size={18}/></Link>)}</div>
@@ -1418,7 +1419,7 @@ function Institutions() {
   return <AppShell><div className="listing-page">
     <div className="page-heading-row"><div><div className="section-kicker">LEARN</div><h1>Institutions & courses</h1><p>Find institutions that can help you close your skill or qualification gaps.</p></div></div>
     <div className="search-bar"><Search/><input aria-label="Search institutions" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && runSearch(query)} placeholder="Search institutions by name or location"/><button type="button" onClick={() => runSearch(query)}>Search</button></div>
-    {status === "loading" && <LoadingState label="Loading institutions..."/>}
+    {status === "loading" && <LoadingState label="Loading institutions..." layout="grid"/>}
     {status === "error" && <ErrorState text={error?.message} status={error?.status} onRetry={() => load(query)}/>}
     {status === "ready" && (items.length
       ? <div className="institution-grid">{items.map(i => <Link className="institution-card" to={`/institutions/${i.id}`} key={i.id}><div className="institution-image"><Building2 size={26}/></div><h2>{i.name}</h2>{i.location && <p><MapPin size={14}/>{i.location}</p>}<span className="btn outline full">View institution <ArrowRight size={15}/></span></Link>)}</div>
@@ -1513,7 +1514,7 @@ function Profile() {
         const p = unwrapObject(profileRes.value);
         const edu = Array.isArray(p.education) && p.education.length ? p.education[0] : {};
         setForm({
-          localName: user?.name || user?.full_name || p.name || p.full_name || (user?.email ? user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1) : ""),
+          localName: getLocalName(user?.id) || user?.name || user?.full_name || p.name || p.full_name || (user?.email ? user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1) : ""),
           email: user?.email ?? "",
           qualification: edu.qualification ?? "BCA",
           educationStatus: edu.status ? edu.status.charAt(0).toUpperCase() + edu.status.slice(1) : "Pursuing",
@@ -1573,7 +1574,7 @@ function Profile() {
           level: userSkillLevels[skill_id] || "beginner"
         }))
       });
-      setLocalName(form.localName);
+      setLocalName(user?.id, form.localName);
       await refreshUser();
       setSavedMsg("Profile and skills saved.");
     } catch (err) {
@@ -1599,7 +1600,7 @@ function Profile() {
     });
   }
 
-  if (status === "loading") return <AppShell><LoadingState label="Loading your profile..."/></AppShell>;
+  if (status === "loading") return <AppShell><LoadingState label="Loading your profile..." layout="profile"/></AppShell>;
   if (status === "error" || !form) return <AppShell><ErrorState text={error?.message} status={error?.status}/></AppShell>;
 
   return <AppShell><div className="profile-page">
@@ -1753,7 +1754,7 @@ function AssistantPage() {
           {!loadingConvo && messages.length === 0 && <div className="assistant-empty" style={{ marginTop: "auto", marginBottom: "auto" }}><Sparkles size={22}/><p>Ask me about careers, courses, pathways or opportunities available through CareerGPS. I'll use CareerGPS data rather than guessing.</p></div>}
           {messages.map((m, i) => (
             <div className={`assistant-msg ${m.role}`} key={m.id ?? i}>
-              <div className="assistant-bubble">{m.content}</div>
+              <div className="assistant-bubble">{(m.content || "").split("\n").map((line, li) => { const parts = line.split(/(\*\*[^*]+\*\*)/g); return <span key={li}>{parts.map((p, pi) => p.startsWith("**") && p.endsWith("**") ? <strong key={pi}>{p.slice(2, -2)}</strong> : p)}{li < (m.content || "").split("\n").length - 1 ? <br/> : null}</span>; })}</div>
               {Array.isArray(m.citations) && m.citations.length > 0 && (
                 <div className="assistant-citations">{m.citations.map((c, ci) => { const label = typeof c === "string" ? c : (c.title || c.source_url || "Source"); const url = typeof c === "object" && c ? (c.source_url || c.url) : null; return url ? <a key={ci} href={url} target="_blank" rel="noreferrer">{label} <ExternalLink size={11}/></a> : <span key={ci}>{label}</span>; })}</div>
               )}
@@ -1998,7 +1999,7 @@ function Saved() {
     } catch { }
   }
 
-  if (status === "loading") return <AppShell><LoadingState label="Loading saved careers..."/></AppShell>;
+  if (status === "loading") return <AppShell><LoadingState label="Loading saved careers..." layout="grid"/></AppShell>;
   if (status === "error") return <AppShell><ErrorState text={error?.message} status={error?.status}/></AppShell>;
 
   return <AppShell><div className="listing-page">
