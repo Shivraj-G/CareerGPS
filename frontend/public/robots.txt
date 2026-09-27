@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /saved
+Disallow: /onboarding
+Disallow: /login
+Disallow: /signup
+Disallow: /eligibility
+
+Sitemap: https://careergpsgoa.in/sitemap.xml

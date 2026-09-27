@@ -1,0 +1,16 @@
+# CareerGPS Goa
+
+CareerGPS Goa is a Goa-first career pathway intelligence platform for students, graduates, working professionals and career switchers.
+
+## Primary pages
+- https://careergpsgoa.in/ — Career discovery home
+- https://careergpsgoa.in/careers — Career catalogue
+- https://careergpsgoa.in/careers/software-developer — Software Developer career guide
+- https://careergpsgoa.in/opportunities — Opportunities catalogue
+- https://careergpsgoa.in/institutions — Institutions and courses
+- https://careergpsgoa.in/learn — Learning catalogue
+
+## Data principles
+- Career and eligibility information should be backed by structured records and source evidence.
+- Current recruitment facts should be verified against official notices before use.
+- AI explanations are not the source of truth for current recruitment requirements.

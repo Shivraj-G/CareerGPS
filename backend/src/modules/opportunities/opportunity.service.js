@@ -9,7 +9,7 @@ export async function listOpportunities(input) {
     AND ($2 = '' OR o.status = $2)
     AND ($3 = '' OR o.opportunity_type ILIKE '%' || $3 || '%')
     AND ($4 = '' OR o.location ILIKE '%' || $4 || '%')
-    AND ($5 = '' OR EXISTS (SELECT 1 FROM career_opportunities co_filter WHERE co_filter.opportunity_id = o.id AND co_filter.career_id = $5))`;
+    AND ($5 = '' OR EXISTS (SELECT 1 FROM career_opportunities co_filter WHERE co_filter.opportunity_id = o.id AND co_filter.career_id = NULLIF($5, '')::uuid))`;
   const count = await pool.query(`SELECT COUNT(*)::int AS total FROM opportunities o ${where}`, values);
   values.push(limit, offset);
   const result = await pool.query(

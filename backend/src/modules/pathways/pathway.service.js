@@ -23,7 +23,7 @@ export async function listPathways({ page, limit, search, careerId }) {
   const values = [search, careerId ?? ''];
   const where = `WHERE p.record_status = 'published' AND p.pathway_type = 'template'
     AND ($1 = '' OR p.title ILIKE '%' || $1 || '%' OR p.description ILIKE '%' || $1 || '%')
-    AND ($2 = '' OR p.career_id = $2)`;
+    AND ($2 = '' OR p.career_id = NULLIF($2, '')::uuid)`;
   const count = await pool.query(`SELECT COUNT(*)::int AS total FROM pathways p ${where}`, values);
   values.push(limit, offset);
   const result = await pool.query(
