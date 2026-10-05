@@ -32,6 +32,11 @@ function cleanCandidateData(data) {
   value.location = typeof value.location === 'string' ? value.location.trim() : value.location;
   value.requirements = Array.isArray(value.requirements) ? value.requirements : [];
   value.career_ids = Array.isArray(value.career_ids) ? value.career_ids : [];
+  
+  if (typeof value.vacancies_total === 'string' && /^\d+$/.test(value.vacancies_total.trim())) {
+    value.vacancies_total = parseInt(value.vacancies_total.trim(), 10);
+  }
+  
   return value;
 }
 
@@ -44,6 +49,25 @@ function validateOpportunityCandidate(data) {
   if (value.status && !['upcoming', 'open', 'closed', 'cancelled', 'unknown'].includes(value.status)) {
     errors.push({ field: 'status', message: 'Invalid opportunity status.' });
   }
+  
+  if (value.vacancies_total !== undefined && value.vacancies_total !== null) {
+    if (!Number.isInteger(value.vacancies_total) || value.vacancies_total < 0) {
+      errors.push({ field: 'vacancies_total', message: 'vacancies_total must be a non-negative integer.' });
+    }
+  }
+
+  if (value.application_opening !== undefined && value.application_opening !== null) {
+    if (Number.isNaN(Date.parse(value.application_opening))) {
+      errors.push({ field: 'application_opening', message: 'application_opening must be a valid date string.' });
+    }
+  }
+
+  if (value.application_deadline !== undefined && value.application_deadline !== null) {
+    if (Number.isNaN(Date.parse(value.application_deadline))) {
+      errors.push({ field: 'application_deadline', message: 'application_deadline must be a valid date string.' });
+    }
+  }
+
   if (!Array.isArray(value.requirements)) errors.push({ field: 'requirements', message: 'requirements must be an array.' });
   for (const [index, requirement] of value.requirements.entries()) {
     if (!requirement || typeof requirement !== 'object') {

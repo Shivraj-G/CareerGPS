@@ -26,3 +26,45 @@ export async function calculateSkillGap(userId, careerId) {
   }
   return { target_career_id: careerId, matched_skills: matched, missing_skills: missing };
 }
+
+function normalizeString(str) {
+  return str.toLowerCase().replace(/[^a-z0-9+#]/g, '');
+}
+
+export async function calculateAiSkillGap(userId, aiCareerId) {
+  const [userSkills, customSkillsRes, careerRes] = await Promise.all([
+    getUserSkills(userId),
+    pool.query(`SELECT name, level FROM user_custom_skills WHERE user_id = $1`, [userId]),
+    pool.query(`SELECT title, required_skills FROM ai_career_profiles WHERE id = $1 AND status <> 'archived'`, [aiCareerId])
+  ]);
+  
+  if (!careerRes.rows[0]) throw new Error("AI career not found");
+  
+  const aiCareer = careerRes.rows[0];
+  const requiredSkills = aiCareer.required_skills || [];
+  
+  const allUserSkills = [
+    ...userSkills,
+    ...customSkillsRes.rows.map(s => ({ name: s.name, level: s.level }))
+  ];
+  
+  const userSkillsMap = new Map();
+  for (const s of allUserSkills) {
+    userSkillsMap.set(normalizeString(s.name), s);
+  }
+  
+  const matched = [];
+  const missing = [];
+  
+  for (const reqSkill of requiredSkills) {
+    const norm = normalizeString(reqSkill.name);
+    const existing = userSkillsMap.get(norm);
+    if (existing) {
+      matched.push({ skill_id: existing.id || null, skill: reqSkill.name, level: existing.level, importance: reqSkill.importance || 'useful' });
+    } else {
+      missing.push({ skill_id: null, skill: reqSkill.name, importance: reqSkill.importance || 'useful' });
+    }
+  }
+  
+  return { target_ai_career_id: aiCareerId, career_title: aiCareer.title, matched_skills: matched, missing_skills: missing, ai_generated: true };
+}

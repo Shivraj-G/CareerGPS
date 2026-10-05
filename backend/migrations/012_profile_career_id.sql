@@ -1,0 +1,1 @@
+ALTER TABLE user_profiles ADD COLUMN career_id UUID REFERENCES careers(id) ON DELETE SET NULL;

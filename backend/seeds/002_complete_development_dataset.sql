@@ -186,7 +186,7 @@ FROM (VALUES
 ('GOVERNMENT POLYTECHNIC PANAJI','Government Polytechnic listed by DTE.','Altino, Panaji, Goa','https://www.gpp.goa.gov.in/'),
 ('INSTITUTE OF SHIPBUILDING TECHNOLOGY GOA','DTE-listed diploma institution in Vasco-da-Gama.','Bogda, Vasco-da-Gama, Goa','https://www.isbt.ac.in/')
 ) x(name,description,location,website) CROSS JOIN (SELECT id FROM sources WHERE name='DTE Technical Diploma Catalogue' LIMIT 1) s
-ON CONFLICT (name) DO UPDATE SET description=EXCLUDED.description,location=EXCLUDED.location,website_url=EXCLUDED.website_url,record_status='published',verification_status='verified',source_id=EXCLUDED.source_id,source_url=EXCLUDED.source_url;
+ON CONFLICT (name) DO UPDATE SET description=EXCLUDED.description,location=EXCLUDED.location,website_url=COALESCE(EXCLUDED.website_url, institutions.website_url),record_status='published',verification_status='verified',source_id=EXCLUDED.source_id,source_url=EXCLUDED.source_url;
 
 -- ---------------------------------------------------------------------------
 -- 6. Official DTE courses (all entries represented on current catalogue page)

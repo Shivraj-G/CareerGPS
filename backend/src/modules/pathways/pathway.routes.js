@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate.js';
 import { generatePathwaySchema, progressSchema } from './pathway.validation.js';
-import { listPathways, getPathway, generatePathway, getUserPathway, updateProgress, savePathway, unsavePathway } from './pathway.service.js';
+import { listPathways, getPathway, getCareerPathways, generatePathway, getUserPathway, selectPathway, selectTemplatePathway, updateProgress, savePathway, unsavePathway, listUserPathways } from './pathway.service.js';
 
 const router = Router();
 const pagination = (req) => {
@@ -18,10 +18,40 @@ router.get('/', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+router.get('/me', authenticate, async (req, res, next) => {
+  try {
+    const data = await listUserPathways(req.user.id);
+    res.json({ data });
+  } catch (e) { next(e); }
+});
+
 router.get('/generated/:userPathwayId', authenticate, async (req, res, next) => {
   try {
     const data = await getUserPathway(req.user.id, req.params.userPathwayId);
     if (!data) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Personalized pathway not found.' } });
+    res.json({ data });
+  } catch (e) { next(e); }
+});
+
+router.get('/career/:careerId', authenticate, async (req, res, next) => {
+  try {
+    const data = await getCareerPathways(req.user.id, req.params.careerId);
+    res.json({ data });
+  } catch (e) { next(e); }
+});
+
+router.post('/generated/:userPathwayId/select', authenticate, async (req, res, next) => {
+  try {
+    const data = await selectPathway(req.user.id, req.params.userPathwayId);
+    if (!data) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Pathway not found or already selected.' } });
+    res.json({ data });
+  } catch (e) { next(e); }
+});
+
+router.post('/template/:pathwayId/select', authenticate, async (req, res, next) => {
+  try {
+    const data = await selectTemplatePathway(req.user.id, req.params.pathwayId);
+    if (!data) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Template pathway not found.' } });
     res.json({ data });
   } catch (e) { next(e); }
 });

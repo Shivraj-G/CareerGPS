@@ -29,13 +29,29 @@ const RAW_BASE = (typeof import.meta !== "undefined" && import.meta.env && impor
 const API_BASE = RAW_BASE.replace(/\/+$/, "");
 
 const TOKEN_KEY = "careergps_token";
-const REQUEST_TIMEOUT_MS = 15000;
+// 60 s default: AI operations (recommendations, pathway generation, career enrichment)
+// can legitimately take 20-40 s. VITE_API_TIMEOUT_MS lets deployments override this.
+// Requests still return immediately when the backend responds; this is the *maximum* wait.
+const REQUEST_TIMEOUT_MS =
+  (typeof import.meta !== "undefined" &&
+    import.meta.env &&
+    Number(import.meta.env.VITE_API_TIMEOUT_MS)) ||
+  60000;
 
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (token === "undefined" || token === "null") {
+    localStorage.removeItem(TOKEN_KEY);
+    return null;
+  }
+  return token;
 }
 export function setToken(token) {
-  if (token) localStorage.setItem(TOKEN_KEY, token);
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(TOKEN_KEY);
+  }
 }
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
@@ -89,6 +105,14 @@ async function request(path, options = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
+  if (options.signal) {
+    if (options.signal.aborted) {
+      controller.abort();
+    } else {
+      options.signal.addEventListener('abort', () => controller.abort());
+    }
+  }
+
   let response;
   try {
     response = await fetch(`${API_BASE}${path}`, {
@@ -116,6 +140,9 @@ async function request(path, options = {}) {
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      clearToken();
+    }
     const backendError = payload?.error;
     throw new ApiError(
       backendError?.message || fallbackMessage(response.status, false),
@@ -126,10 +153,10 @@ async function request(path, options = {}) {
   return payload;
 }
 
-const get = (path) => request(path, { method: "GET" });
-const post = (path, body) => request(path, { method: "POST", body: body !== undefined ? JSON.stringify(body) : undefined });
-const put = (path, body) => request(path, { method: "PUT", body: JSON.stringify(body) });
-const del = (path) => request(path, { method: "DELETE" });
+const get = (path, opts = {}) => request(path, { method: "GET", ...opts });
+const post = (path, body, opts = {}) => request(path, { method: "POST", body: body !== undefined ? JSON.stringify(body) : undefined, ...opts });
+const put = (path, body, opts = {}) => request(path, { method: "PUT", body: JSON.stringify(body), ...opts });
+const del = (path, opts = {}) => request(path, { method: "DELETE", ...opts });
 
 export const api = {
   // --- Auth (src/modules/auth) --------------------------------------
@@ -144,13 +171,19 @@ export const api = {
 
   // --- Profile (src/modules/profiles) ---------------------------------
   profile: () => get("/profiles/me"),
-  updateProfile: (body) => put("/profiles/me", body),
-  profileCompleteness: () => get("/profiles/me/completeness"),
+  updateProfile: (body, opts = {}) => put("/profiles/me", body, opts),
+  profileCompleteness: (opts = {}) => get("/profiles/me/completeness", opts),
+  validateGoal: (body, opts = {}) => post("/profiles/me/validate-goal", body, opts),
+
+  // --- Education (src/modules/education) --------------------------------
+  educationPrograms: (stream) => get(`/education/programs?stream=${encodeURIComponent(stream || "")}`),
+  validateProgram: (body) => post(`/education/validate`, body),
 
   // --- Careers (src/modules/careers, public) --------------------------
   // GET /careers only supports `search`, `page`, `limit` - there is no
   // industry/location/education/career-type filter on the backend.
   careers: (params = {}) => get(`/careers${buildQuery(params)}`),
+  exploreCareer: (body) => post(`/careers/explore`, body),
   career: (id) => get(`/careers/${id}`),
   careerSkills: (id) => get(`/careers/${id}/skills`),
   careerCourses: (id) => get(`/careers/${id}/courses`),
@@ -159,11 +192,23 @@ export const api = {
   careerRelated: (id) => get(`/careers/${id}/related`),
   careerSources: (id) => get(`/careers/${id}/sources`),
 
+  // --- AI Careers (src/modules/careers/ai-career.routes.js) ------------
+  aiCareer: (id) => get(`/ai-careers/${id}`),
+  aiCareerPathway: (id) => get(`/ai-careers/${id}/pathway`),
+  updateAiCareerPathwayProgress: (id, steps) => post(`/ai-careers/${id}/pathway/progress`, { steps }),
+  saveAiCareer: (id) => post(`/ai-careers/${id}/save`),
+  unsaveAiCareer: (id) => del(`/ai-careers/${id}/save`),
+  myAiCareers: () => get("/users/me/ai-careers"),
+  
   // --- Skills (src/modules/skills) -------------------------------------
-  skills: (params = {}) => get(`/skills${buildQuery(params)}`),
+  skills: (params = {}, opts = {}) => get(`/skills${buildQuery(params)}`, opts),
+  suggestSkills: (body, opts = {}) => post(`/skills/suggest`, body, opts),
   mySkills: () => get("/skills/me"),
   updateMySkills: (body) => put("/skills/me", body),
-  // POST /skills/gap-analysis body: { target_career_id } -> matched/missing skills.
+  myCustomSkills: () => get("/skills/me/custom"),
+  addCustomSkill: (body) => post("/skills/me/custom", body),
+  deleteCustomSkill: (id) => del(`/skills/me/custom/${id}`),
+  // POST /skills/gap-analysis body: { target_career_id, target_ai_career_id } -> matched/missing skills.
   // This is the backend's real "is this career for me" capability - there is
   // no generic /careers/:id/eligibility route.
   gapAnalysis: (body) => post("/skills/gap-analysis", body),
@@ -183,11 +228,15 @@ export const api = {
   // endpoint that lists a user's own generated pathways; see
   // docs/API-INTEGRATION-MAP.md.
   pathwayTemplates: (params = {}) => get(`/pathways${buildQuery(params)}`),
+  userPathways: () => get("/pathways/me"),
   pathway: (id) => get(`/pathways/${id}`),
   pathwaySteps: (id) => get(`/pathways/${id}/steps`),
   // body: { pathway_id? , career_id?, goal?, preferences? } - one of
   // pathway_id/career_id is required.
   generatePathway: (body) => post("/pathways/generate", body),
+  careerPathwaysList: (careerId) => get(`/pathways/career/${careerId}`),
+  selectPathway: (userPathwayId) => post(`/pathways/generated/${userPathwayId}/select`),
+  selectTemplatePathway: (pathwayId) => post(`/pathways/template/${pathwayId}/select`),
   // GET /pathways/generated/:userPathwayId -> a specific personalized pathway by its own id.
   userPathway: (userPathwayId) => get(`/pathways/generated/${userPathwayId}`),
   // GET/POST accept either the user_pathway id OR the template pathway_id.

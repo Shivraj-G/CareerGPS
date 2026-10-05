@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { registerSchema, loginSchema } from './auth.validation.js';
-import { register, login } from './auth.service.js';
+import { register, login, verifyRefreshToken, signAccessToken } from './auth.service.js';
 import { authRateLimit } from './rateLimit.js';
 
 const router = Router();
@@ -16,11 +16,27 @@ function validate(schema, req, res) {
   return parsed.data;
 }
 
+function setRefreshTokenCookie(res, token) {
+  res.cookie('refreshToken', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+  });
+}
+
+function getCookie(req, name) {
+  const match = req.headers.cookie?.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 router.post('/register', authRateLimit, async (req, res, next) => {
   try {
     const input = validate(registerSchema, req, res);
     if (!input) return;
-    res.status(201).json(await register(input));
+    const { user, accessToken, refreshToken } = await register(input);
+    setRefreshTokenCookie(res, refreshToken);
+    res.status(201).json({ user, accessToken });
   } catch (error) { next(error); }
 });
 
@@ -28,7 +44,21 @@ router.post('/login', authRateLimit, async (req, res, next) => {
   try {
     const input = validate(loginSchema, req, res);
     if (!input) return;
-    res.json(await login(input));
+    const { user, accessToken, refreshToken } = await login(input);
+    setRefreshTokenCookie(res, refreshToken);
+    res.json({ user, accessToken });
+  } catch (error) { next(error); }
+});
+
+router.post('/refresh', async (req, res, next) => {
+  try {
+    const token = getCookie(req, 'refreshToken');
+    if (!token) {
+      return res.status(401).json({ error: { code: 'UNAUTHENTICATED', message: 'No refresh token provided.' } });
+    }
+    const userPayload = await verifyRefreshToken(token);
+    const newAccessToken = signAccessToken(userPayload);
+    res.json({ accessToken: newAccessToken });
   } catch (error) { next(error); }
 });
 

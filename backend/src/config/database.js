@@ -10,6 +10,10 @@ export const pool = new Pool({
   connectionTimeoutMillis: 5_000
 });
 
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle PostgreSQL client', err);
+});
+
 export async function checkDatabase() {
   const result = await pool.query('SELECT 1 AS ok');
   return result.rows[0]?.ok === 1;

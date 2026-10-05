@@ -45,16 +45,22 @@ export async function getConversation(userId, conversationId) {
 }
 
 async function retrieveContext(message, userId, conversationId) {
-  const terms = message.toLowerCase().split(/[^a-z0-9]+/).filter((x) => x.length >= 3).slice(0, 12);
-  // Use keyword pattern for targeted search; fall back to '%' to get all published data for general questions
-  const pattern = terms.length ? `%${terms.join('%')}%` : '%';
+  const stopWords = new Set(['what', 'where', 'when', 'why', 'who', 'how', 'can', 'could', 'would', 'should', 'is', 'are', 'was', 'were', 'am', 'the', 'a', 'an', 'in', 'for', 'of', 'to', 'and', 'or', 'with', 'about', 'from', 'i', 'do', 'does', 'did', 'my', 'me', 'want', 'become', 'options', 'there', 'here', 'any', 'some', 'after', 'pursue']);
+  const terms = message.toLowerCase().split(/[^a-z0-9]+/)
+    .filter((x) => x.length >= 3 && !stopWords.has(x))
+    .slice(0, 12);
+  
+  const ilikeTerms = terms.map(t => `%${t}%`);
+  const termCondition = ilikeTerms.length > 0 
+    ? `(title ILIKE ANY($1) OR COALESCE(description,'') ILIKE ANY($1))` 
+    : '1=1';
 
   const queries = [
     pool.query(`SELECT education, experience, interests, preferred_locations, career_goal FROM user_profiles WHERE user_id = $1`, [userId]),
-    pool.query(`SELECT id, title, description, qualifications, entry_routes, source_url, source_document_url, verified_at FROM careers WHERE record_status = 'published' AND (LOWER(title) LIKE $1 OR LOWER(COALESCE(description,'')) LIKE $1) ORDER BY title LIMIT 8`, [pattern]),
-    pool.query(`SELECT id, title, organization, opportunity_type, location, status, application_deadline, description, source_url, source_document_url, verified_at FROM opportunities WHERE record_status = 'published' AND (LOWER(title) LIKE $1 OR LOWER(COALESCE(description,'')) LIKE $1 OR LOWER(COALESCE(location,'')) LIKE $1) ORDER BY application_deadline NULLS LAST LIMIT 8`, [pattern]),
-    pool.query(`SELECT p.id, p.title, p.description, p.career_id, c.title AS career_title, p.source_url, p.source_document_url, p.verified_at FROM pathways p JOIN careers c ON c.id = p.career_id WHERE p.record_status = 'published' AND p.pathway_type = 'template' AND (LOWER(p.title) LIKE $1 OR LOWER(COALESCE(p.description,'')) LIKE $1) ORDER BY p.title LIMIT 8`, [pattern]),
-    pool.query(`SELECT c.id, c.title, c.description, c.location, c.source_url, c.source_document_url, c.verified_at FROM courses c WHERE c.record_status = 'published' AND (LOWER(c.title) LIKE $1 OR LOWER(COALESCE(c.description,'')) LIKE $1) ORDER BY c.title LIMIT 8`, [pattern]),
+    pool.query(`SELECT id, title, description, qualifications, entry_routes, source_url, source_document_url, verified_at FROM careers WHERE record_status = 'published' AND ${termCondition} ORDER BY title LIMIT 8`, ilikeTerms.length ? [ilikeTerms] : []),
+    pool.query(`SELECT id, title, organization, opportunity_type, location, status, application_deadline, description, source_url, source_document_url, verified_at FROM opportunities WHERE record_status = 'published' AND (${termCondition} OR COALESCE(location,'') ILIKE ANY($1)) ORDER BY application_deadline NULLS LAST LIMIT 8`, ilikeTerms.length ? [ilikeTerms] : []),
+    pool.query(`SELECT p.id, p.title, p.description, p.career_id, c.title AS career_title, p.source_url, p.source_document_url, p.verified_at FROM pathways p JOIN careers c ON c.id = p.career_id WHERE p.record_status = 'published' AND p.pathway_type = 'template' AND (${ilikeTerms.length > 0 ? `(p.title ILIKE ANY($1) OR COALESCE(p.description,'') ILIKE ANY($1))` : '1=1'}) ORDER BY p.title LIMIT 8`, ilikeTerms.length ? [ilikeTerms] : []),
+    pool.query(`SELECT c.id, c.title, c.description, c.location, c.source_url, c.source_document_url, c.verified_at FROM courses c WHERE c.record_status = 'published' AND (${termCondition}) ORDER BY c.title LIMIT 8`, ilikeTerms.length ? [ilikeTerms] : []),
   ];
 
   const [profile, careers, opportunities, pathways, courses] = await Promise.all(queries);
