@@ -23,10 +23,12 @@
  */
 
 const RAW_BASE = (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_API_BASE_URL) || "/api/v1";
-// Guard against accidentally configuring VITE_API_BASE_URL with a trailing
-// slash, which would otherwise double up when concatenated with a path
-// that starts with "/" (e.g. ".../api/v1//opportunities").
-const API_BASE = RAW_BASE.replace(/\/+$/, "");
+// Guard against accidentally configuring VITE_API_BASE_URL with a trailing slash.
+let API_BASE = RAW_BASE.replace(/\/+$/, "");
+// If the user sets VITE_API_BASE_URL=https://careergps-production.up.railway.app without the /api/v1 suffix, automatically append it to prevent 404s.
+if (!API_BASE.endsWith("/api/v1")) {
+  API_BASE += "/api/v1";
+}
 
 const TOKEN_KEY = "careergps_token";
 // 60 s default: AI operations (recommendations, pathway generation, career enrichment)
