@@ -1,1 +1,8 @@
-剃䅅䕔䤠䑎塅䤠⁆低⁔塅卉協椠硤畟敳彲歳汩獬獟楫汬楟੤†乏甠敳彲歳汩獬猨楫汬楟⥤਻䌊䕒呁⁅义䕄⁘䙉丠呏䔠䥘呓⁓摩彸慣敲牥潟灰牯畴楮楴獥潟灰牯畴楮祴楟੤†乏挠牡敥彲灯潰瑲湵瑩敩⡳灯潰瑲湵瑩役摩㬩ਊ剃䅅䕔䤠䑎塅䤠⁆低⁔塅卉協椠硤獟癡摥楟整獭楟整彭摩 传⁎慳敶彤瑩浥⡳瑩浥楟Ɽ椠整彭祴数㬩
+CREATE INDEX IF NOT EXISTS idx_user_skills_skill_id
+  ON user_skills(skill_id);
+
+CREATE INDEX IF NOT EXISTS idx_career_opportunities_opportunity_id
+  ON career_opportunities(opportunity_id);
+
+CREATE INDEX IF NOT EXISTS idx_saved_items_item_id
+  ON saved_items(item_id, item_type);
