@@ -2981,11 +2981,6 @@ function CareerDetail() {
       return;
     }
 
-    if (type === 'ai_profile') {
-      setTabData((d) => ({ ...d, [tab]: [] }));
-      setTabStatus("ready");
-      return;
-    }
 
     const fetchers = {
       skills: () => api.careerSkills(id),
