@@ -1970,7 +1970,6 @@ function Onboarding() {
                           <option>Commerce</option>
                           <option>Arts / Humanities</option>
                           <option>Vocational</option>
-                          <option>Other</option>
                         </select>
                       </label>
 
@@ -5584,7 +5583,6 @@ function Profile() {
                         <option>Commerce</option>
                         <option>Arts / Humanities</option>
                         <option>Vocational</option>
-                        <option>Other</option>
                       </select>
                     </label>
 
