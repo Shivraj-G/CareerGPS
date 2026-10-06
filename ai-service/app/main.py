@@ -820,7 +820,7 @@ def assistant_answer(request: AssistantRequest, x_internal_service_token: str | 
 
 EXPLORE_BUDGET = 12.0
 SKILLS_BUDGET = 8.0
-DRAFT_BUDGET = 12.0
+DRAFT_BUDGET = 40.0
 EXPLORE_TTL = 24 * 3600.0
 AI_DISCLAIMER = "AI-generated guidance based on general knowledge. Not yet verified by CareerGPS."
 

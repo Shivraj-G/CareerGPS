@@ -1,5 +1,6 @@
 import { pool } from '../../config/database.js';
 import { env } from '../../config/env.js';
+import { logger } from '../../utils/logger.js';
 
 export async function listUserPathways(userId) {
   const result = await pool.query(
@@ -15,7 +16,10 @@ export async function listUserPathways(userId) {
 }
 
 async function callAi(path, payload, timeoutMs = 8000) {
-  if (!env.AI_SERVICE_URL) return null;
+  if (!env.AI_SERVICE_URL) {
+    logger.error('callAi failed: AI_SERVICE_URL is not set');
+    return null;
+  }
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -24,9 +28,14 @@ async function callAi(path, payload, timeoutMs = 8000) {
     const response = await fetch(`${env.AI_SERVICE_URL}${path}`, {
       method: 'POST', headers, body: JSON.stringify(payload), signal: controller.signal
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      logger.error(`callAi HTTP ${response.status}`, { path, text: text.substring(0, 500) });
+      return null;
+    }
     return await response.json();
-  } catch {
+  } catch (err) {
+    logger.error(`callAi network/timeout error: ${err.message}`, { path, name: err.name });
     return null;
   } finally { clearTimeout(timeout); }
 }
@@ -127,6 +136,7 @@ export async function generatePathway(userId, input) {
     }, 45000);
 
     if (!aiRes || aiRes.status !== 'ai_generated' || !aiRes.pathways || aiRes.pathways.length !== 2) {
+      logger.error('Failed to generate pathways', { aiRes: JSON.stringify(aiRes)?.substring(0, 500) });
       const error = new Error('Failed to generate pathways.');
       error.statusCode = 500; error.code = 'AI_GENERATION_FAILED'; throw error;
     }
