@@ -182,6 +182,7 @@ class SkillGapExplainRequest(BaseModel):
     required_skills: list[dict[str, Any]] = Field(default_factory=list)
     matched_skills: list[dict[str, Any]] = Field(default_factory=list)
     missing_skills: list[dict[str, Any]] = Field(default_factory=list)
+    profile: dict[str, Any] | None = Field(default_factory=dict)
 
 
 class AssistantRequest(BaseModel):

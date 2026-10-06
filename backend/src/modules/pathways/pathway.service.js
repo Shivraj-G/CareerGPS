@@ -135,9 +135,21 @@ export async function generatePathway(userId, input) {
       skill_gap: { matched, missing_required: missingRequired, missing_useful: missingUseful }
     }, 45000);
 
-    if (!aiRes || aiRes.status !== 'ai_generated' || !aiRes.pathways || aiRes.pathways.length !== 2) {
-      logger.error('Failed to generate pathways', { aiRes: JSON.stringify(aiRes)?.substring(0, 500) });
-      const error = new Error('Failed to generate pathways.');
+    if (!aiRes) {
+      logger.error('Pathway generation failed: AI service unreachable, timed out, or returned an HTTP error');
+      const error = new Error('Failed to generate pathways. AI service is unreachable.');
+      error.statusCode = 503; error.code = 'AI_SERVICE_UNAVAILABLE'; throw error;
+    }
+
+    if (aiRes.status === 'unavailable') {
+      logger.error('Pathway generation failed: AI service returned status "unavailable"', { aiResStatus: aiRes.status, disclaimer: aiRes.disclaimer });
+      const error = new Error('Failed to generate pathways. AI service is currently unable to generate the pathway.');
+      error.statusCode = 503; error.code = 'AI_GENERATION_UNAVAILABLE'; throw error;
+    }
+
+    if (aiRes.status !== 'ai_generated' || !aiRes.pathways || aiRes.pathways.length !== 2) {
+      logger.error('Pathway generation failed: AI response validation failed or malformed response', { aiResStatus: aiRes.status, hasPathways: !!aiRes.pathways, pathwaysCount: aiRes.pathways?.length });
+      const error = new Error('Failed to generate pathways due to malformed AI response.');
       error.statusCode = 500; error.code = 'AI_GENERATION_FAILED'; throw error;
     }
 
