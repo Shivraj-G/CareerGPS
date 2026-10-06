@@ -351,10 +351,10 @@ router.post('/explore', authenticate, exploreRateLimit, async (req, res, next) =
              finalAiCareer = exist.rows[0];
            } else {
              const cRes = await client.query(
-               `INSERT INTO careers (title, normalized_title, description, responsibilities, qualifications, entry_routes, origin, verification_status, record_status)
-                VALUES ($1, $2, $3, $4, $5, $6, 'ai_generated', 'unverified', 'published')
+               `INSERT INTO careers (title, description, responsibilities, qualifications, entry_routes, origin, verification_status, record_status)
+                VALUES ($1, $2, $3, $4, $5, 'ai_generated', 'unverified', 'published')
                 RETURNING id`,
-               [validData.title, generatedNormalizedTitle, validData.description, JSON.stringify(validData.responsibilities), JSON.stringify(validData.qualifications), JSON.stringify(validData.entry_routes)]
+               [validData.title, validData.description, JSON.stringify(validData.responsibilities), JSON.stringify(validData.qualifications), JSON.stringify(validData.entry_routes)]
              );
              const cId = cRes.rows[0].id;
 
@@ -368,13 +368,13 @@ router.post('/explore', authenticate, exploreRateLimit, async (req, res, next) =
                 const normSkill = normalizeString(sk.name);
                 if (!normSkill) continue;
                 let skId;
-                const skRes = await client.query(`SELECT id FROM skills WHERE normalized_name = $1 AND record_status = 'published'`, [normSkill]);
+                const skRes = await client.query(`SELECT id FROM skills WHERE name ILIKE $1 AND record_status = 'published'`, [sk.name]);
                 if (skRes.rows.length > 0) {
                     skId = skRes.rows[0].id;
                 } else {
                     const newSk = await client.query(
-                      `INSERT INTO skills (name, normalized_name, description, origin, verification_status, record_status) VALUES ($1, $2, $3, 'ai_generated', 'unverified', 'published') RETURNING id`, 
-                      [sk.name, normSkill, 'AI generated skill']
+                      `INSERT INTO skills (name, description, origin, verification_status, record_status) VALUES ($1, $2, 'ai_generated', 'unverified', 'published') RETURNING id`, 
+                      [sk.name, 'AI generated skill']
                     );
                     skId = newSk.rows[0].id;
                 }
