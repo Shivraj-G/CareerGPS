@@ -2051,6 +2051,7 @@ function Onboarding() {
                 ) : (
                   <SkillPicker
                     userSkillIds={new Set(form.skills.map(s => s.skill_id || s.id))}
+                    selectedSkills={form.skills.map(s => ({ id: s.skill_id, name: s.name }))}
                     toggleSkill={toggleSkill}
                     careerGoal={form.careerGoal}
                     educationContext={[form.educationStage, form.stream, form.degree, form.specialization, form.industry, form.currentRole].filter(Boolean).join(' ')}
@@ -4812,7 +4813,7 @@ function Learn() {
   );
 }
 
-function SkillPicker({ userSkillIds, toggleSkill, careerGoal, educationContext }) {
+function SkillPicker({ userSkillIds, selectedSkills = [], toggleSkill, careerGoal, educationContext }) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
@@ -4898,6 +4899,27 @@ function SkillPicker({ userSkillIds, toggleSkill, careerGoal, educationContext }
         />
         {(loadingRecs || loadingSearch) && <span className="muted" style={{ fontSize: 12, position: 'absolute', right: 12 }}>Loading...</span>}
       </div>
+
+      {selectedSkills.length > 0 && (
+        <div style={{ marginBottom: 24, padding: '12px 16px', background: 'var(--bg-light)', borderRadius: 8, border: '1px solid var(--line)' }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Your Selected Skills
+          </div>
+          <div className="chip-picker compact">
+            {selectedSkills.map(sk => (
+              <span
+                key={sk.id || sk.skill_id}
+                className="chip active"
+                onClick={() => toggleSkill(sk)}
+                style={{ cursor: "pointer", display: 'inline-flex', alignItems: 'center', gap: 4 }}
+              >
+                {sk.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
 
       {!isSearchMode && (careerGoal || educationContext) && uniqueDisplaySkills.length > 0 && !recsError && (
         <div style={{ marginBottom: 16, fontSize: 13, fontWeight: 500, color: 'var(--brand)' }}>
@@ -5686,6 +5708,7 @@ function Profile() {
               <div>
                 <SkillPicker
                   userSkillIds={userSkillIds}
+                  selectedSkills={Array.from(userSkillIds).map(id => allSkills.find(s => s.id === id) || customSkills.find(s => s.id === id)).filter(Boolean)}
                   toggleSkill={(sk) => toggleSkill(sk)}
                   careerGoal={form.careerGoal}
                   educationContext={form.educationStage + (form.degree ? ` ${form.degree}` : '')}
