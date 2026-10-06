@@ -42,9 +42,19 @@ router.get('/:careerId', async (req, res, next) => {
               c.verification_status, c.origin, c.source_url, c.source_document_url, c.source_last_checked_at, c.verified_at
        FROM careers c WHERE c.id = $1 AND c.record_status = 'published'`, [req.params.careerId]
     );
-    if (!result.rows[0]) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Career not found.' } });
     
-    let career = result.rows[0];
+    let career;
+    if (!result.rows[0]) {
+      const aiResult = await pool.query(
+        `SELECT id, id as ai_career_id, title, description, responsibilities, qualifications, entry_routes,
+                status as verification_status, 'ai_generated' as origin
+         FROM ai_career_profiles WHERE id = $1 AND status <> 'archived'`, [req.params.careerId]
+      );
+      if (!aiResult.rows[0]) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Career not found.' } });
+      career = aiResult.rows[0];
+    } else {
+      career = result.rows[0];
+    }
 
     // Check if enriched
     const enrichRes = await pool.query(
@@ -117,6 +127,25 @@ router.get('/:careerId', async (req, res, next) => {
 router.get('/:careerId/skills', async (req, res, next) => {
   try {
     const result = await pool.query(`SELECT s.id, s.name, s.description, cs.importance, cs.origin, cs.verification_status FROM career_skills cs JOIN skills s ON s.id = cs.skill_id WHERE cs.career_id = $1 AND s.record_status = 'published' ORDER BY CASE cs.importance WHEN 'required' THEN 1 WHEN 'important' THEN 2 ELSE 3 END, s.name`, [req.params.careerId]);
+    
+    if (result.rows.length === 0) {
+      const aiResult = await pool.query(`SELECT required_skills FROM ai_career_profiles WHERE id = $1`, [req.params.careerId]);
+      if (aiResult.rows.length > 0 && Array.isArray(aiResult.rows[0].required_skills) && aiResult.rows[0].required_skills.length > 0) {
+        const mappedSkills = aiResult.rows[0].required_skills.map((s, index) => ({
+          id: `ai-skill-fallback-${index}`,
+          name: s.name,
+          description: null,
+          importance: s.importance || 'useful',
+          origin: 'ai_generated',
+          verification_status: 'unverified'
+        })).sort((a, b) => {
+          const w = { 'required': 1, 'important': 2, 'useful': 3 };
+          return (w[a.importance] || 3) - (w[b.importance] || 3) || a.name.localeCompare(b.name);
+        });
+        return res.json({ data: mappedSkills });
+      }
+    }
+    
     res.json({ data: result.rows });
   } catch (e) { next(e); }
 });
