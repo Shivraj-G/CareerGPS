@@ -2209,10 +2209,11 @@ function Onboarding() {
                 </button>
 
                 {step === 4 ? (
-                  (!validationData || ['RED', 'INVALID_GOAL'].includes(validationData.classification)) ? (
+                  (validationData && ['RED', 'INVALID_GOAL'].includes(validationData.classification)) ? null :
+                  (!validationData) ? (
                     <button
                       className="btn primary"
-                      disabled={submitting || isValidating || (validationData && ['RED', 'INVALID_GOAL'].includes(validationData.classification))}
+                      disabled={submitting || isValidating}
                       onClick={validateAndFinish}
                     >
                       {submitting ? "Saving..." : "Finish"} <ArrowRight />

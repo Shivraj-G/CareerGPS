@@ -109,11 +109,19 @@ def _edu_label(entry: Any) -> str:
             
         name = entry.get("current_program") or entry.get("degree") or entry.get("qualification") or entry.get("name")
         stream = entry.get("school_12_stream") or entry.get("stream")
-        stream_str = f", 12th stream: {stream}" if stream else ""
-        extra = ", ".join(str(x) for x in (entry.get("status"), entry.get("year")) if x)
-        if name and extra:
-            return f"{name} ({extra}{stream_str})"
-        return str(name) if name else ""
+        
+        parts = []
+        if name: parts.append(str(name))
+        
+        meta = []
+        if entry.get("status"): meta.append(str(entry["status"]))
+        if entry.get("year"): meta.append(str(entry["year"]))
+        if stream: meta.append(f"12th stream: {stream}")
+        
+        if meta and parts:
+            parts.append(f"({', '.join(meta)})")
+            
+        return " ".join(parts) if parts else ""
     return str(entry) if entry else ""
 
 
@@ -1292,32 +1300,36 @@ def careers_enrich(request: CareerEnrichRequest, x_internal_service_token: str |
 
 
 GOAL_VALIDATE_SYSTEM = (
-    "You are CareerGPS's career validation engine. A user provides their career goal and their current profile (education, experience, skills).\n"
-    "You must perform a HOLISTIC EDUCATIONAL EVALUATION: Evaluate '12th Stream -> Bachelor\\'s Degree -> Career Goal'. The 12th stream is foundational information and MUST NOT be ignored.\n"
-    "Determine the classification using the following rules:\n"
-    "GREEN: HIGHLY ALIGNED & FEASIBLE. 12th stream is compatible, Bachelor's degree is compatible, Career goal is a standard/logical progression. No major formal prerequisite conflict exists.\n"
-    "YELLOW: CHALLENGING PIVOT / HARD BUT POSSIBLE. Bachelor's degree does not directly align, BUT the user's foundational education or transferable background makes the goal realistically pursuable OR substantial additional education/skills/experience are required BUT there is no fundamental educational impossibility.\n"
-    "RED: FUNDAMENTALLY INCOMPATIBLE. Genuine fundamental conflict. The goal requires formal prerequisites that the user's 12th Stream AND Bachelor's Degree do not satisfy, and the normal route cannot be treated as a direct continuation.\n"
-    "INVALID_GOAL: Nonsense, non-career, abusive, or meaningless goal statement. However, DO NOT reject legitimate occupations (e.g. Chef, Electrician, Plumber, Entrepreneur) merely because they don't require a bachelor's degree.\n"
-    "ABSOLUTELY NO FAKE BRIDGE COURSES. AI cannot invent fictional shortcuts or fake degrees. Use structured CareerGPS database career requirements as the source of truth.\n"
+    "You are CareerGPS's career validation engine. You must perform a HOLISTIC EDUCATIONAL EVALUATION of '12th Stream -> Bachelor\\'s Degree -> Career Goal'.\n"
+    "You must explicitly distinguish a FOUNDATIONAL CONFLICT from a DEGREE DETOUR.\n"
+    "1. Is the career aim a legitimate career?\n"
+    "2. What formal prerequisites does this career require?\n"
+    "3. Does the user's 12th-grade foundation satisfy the fundamental prerequisites? (e.g., Medical paths strictly require Science PCB. If Commerce -> Doctor, that is a foundational conflict).\n"
+    "4. Does the Bachelor's degree align directly?\n"
+    "5. If Bachelor's does not align, is it a DETOUR that can still lead to the aim? (e.g. PCB -> BCA -> Doctor = Bachelor's is a detour, but 12th foundation passes, so it is a detour, not a conflict. Similarly Commerce -> BCA -> AI Engineer = no strict 12th conflict, just a detour).\n\n"
+    "RULES FOR CLASSIFICATION:\n"
+    "- If foundational_conflict == true -> RED\n"
+    "- If bachelors_alignment_status == 'DETOUR' (or false) AND foundational_conflict == false -> YELLOW\n"
+    "- If bachelors_alignment_status == 'ALIGNED' AND foundational_conflict == false -> GREEN\n"
+    "- If goal is nonsense/abusive -> INVALID_GOAL\n\n"
+    "YELLOW means 'Challenging path, but achievable.' It is NOT a conflict. Explain the required formal admission steps without inventing fake bridge courses. AI must explain requirements, not invent them.\n\n"
     "Respond ONLY with a JSON object matching this schema:\n"
     "{\n"
     "  \"classification\": \"GREEN|YELLOW|RED|INVALID_GOAL\",\n"
     "  \"goal_valid\": true,\n"
     "  \"career_name\": \"<normalized goal name from catalogue if matched, or original>\",\n"
-    "  \"education_assessment\": {\n"
-    "    \"twelfth_stream\": { \"status\": \"ALIGNED|NOT_ALIGNED\", \"reason\": \"...\" },\n"
-    "    \"bachelors_degree\": { \"status\": \"ALIGNED|NOT_ALIGNED\", \"reason\": \"...\" }\n"
-    "  },\n"
-    "  \"formal_requirements\": [\"barrier1\"],\n"
-    "  \"missing_requirements\": [\"req1\"],\n"
-    "  \"additional_preparation\": [\"step1\"],\n"
-    "  \"reason\": \"<For GREEN: Highly aligned. Your education provides a strong foundation... For YELLOW: Challenging path, but achievable... explain detour honestly and encouragingly. For RED: Career Conflict. Your current educational background does not satisfy... For INVALID_GOAL: Please enter a valid career or professional goal.>\",\n"
-    "  \"encouragement\": \"<For YELLOW: highly encouraging statement>\",\n"
-    "  \"can_continue\": true,\n"
-    "  \"can_generate_pathway\": true\n"
+    "  \"twelfth_foundation\": { \"status\": \"SUPPORTS|DOES_NOT_SUPPORT\", \"reason\": \"...\" },\n"
+    "  \"bachelors_alignment\": { \"status\": \"ALIGNED|DETOUR|IRRELEVANT_TO_HARD_CONFLICT\", \"reason\": \"...\" },\n"
+    "  \"career_requirements\": [\"barrier1\"],\n"
+    "  \"foundational_conflict\": true|false,\n"
+    "  \"detour_required\": true|false,\n"
+    "  \"additional_steps\": [\"step1\"],\n"
+    "  \"reason\": \"<For GREEN: No warning needed. For YELLOW: 'Your [Bachelor] is different from the standard [career] education route, so this is a significant career pivot. However, your 12th [Stream] foundation supports the required background. You would need to follow...' For RED: 'Your current educational foundation does not satisfy the fundamental subject requirements for this career. Your 12th [Stream] background does not provide...' For INVALID_GOAL: Please enter a valid goal.>\",\n"
+    "  \"requires_acknowledgement\": true|false,\n"
+    "  \"can_continue\": true|false,\n"
+    "  \"can_generate_pathway\": true|false\n"
     "}\n"
-    "Set can_continue and can_generate_pathway to true for GREEN and YELLOW, and false for RED and INVALID_GOAL."
+    "Set requires_acknowledgement to true for YELLOW, false otherwise. Set can_continue and can_generate_pathway to true for GREEN/YELLOW, false for RED/INVALID_GOAL."
 )
 
 @app.post("/internal/v1/profiles/validate-goal")
@@ -1366,10 +1378,10 @@ def profiles_validate_goal(request: GoalValidateRequest, x_internal_service_toke
         "goal_validity": "INVALID" if classification == "INVALID_GOAL" else "VALID",
         "career_resolution": "KNOWN" if parsed.get("career_name") else "UNKNOWN",
         "reason": parsed.get("reason", "Your career goal aligns with your profile."),
-        "formal_barriers": _str_list(parsed.get("formal_requirements", []), 5, 100),
-        "missing_requirements": _str_list(parsed.get("missing_requirements", []), 5, 100),
-        "skill_gaps": _str_list(parsed.get("additional_preparation", []), 5, 100),
-        "recommended_route": _str_list(parsed.get("additional_preparation", []), 5, 100),
+        "formal_barriers": _str_list(parsed.get("career_requirements", []), 5, 100),
+        "missing_requirements": _str_list(parsed.get("additional_steps", []), 5, 100),
+        "skill_gaps": _str_list(parsed.get("additional_steps", []), 5, 100),
+        "recommended_route": _str_list(parsed.get("additional_steps", []), 5, 100),
         "suggested_goals": [],
         "allow_continue": parsed.get("can_continue", classification in ["GREEN", "YELLOW"]),
         "ai_generated": True
