@@ -305,23 +305,73 @@ router.post('/explore', authenticate, exploreRateLimit, async (req, res, next) =
          const validData = aiCareerSchema.parse(aiData.career);
          const generatedNormalizedTitle = normalizeString(validData.title);
          
-         await pool.query(
-           `INSERT INTO ai_career_profiles (title, normalized_title, description, responsibilities, qualifications, entry_routes, required_skills, related_careers, goa_relevance)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            ON CONFLICT (normalized_title) DO NOTHING`,
-           [validData.title, generatedNormalizedTitle, validData.description, JSON.stringify(validData.responsibilities), JSON.stringify(validData.qualifications), JSON.stringify(validData.entry_routes), JSON.stringify(validData.required_skills), JSON.stringify(validData.related_careers), validData.goa_relevance]
-         );
-         
-         const inserted = await pool.query(
-           `SELECT id as ai_career_id, title, description, responsibilities, qualifications, entry_routes,
-                   required_skills, related_careers, goa_relevance, status, pathway_draft
-            FROM ai_career_profiles WHERE normalized_title = $1`,
-           [generatedNormalizedTitle]
-         );
+         let finalAiCareer;
+         const client = await pool.connect();
+         try {
+           await client.query('BEGIN');
+           const exist = await client.query(
+             `SELECT id as ai_career_id, title, description, responsibilities, qualifications, entry_routes,
+                     required_skills, related_careers, goa_relevance, status, pathway_draft
+              FROM ai_career_profiles WHERE normalized_title = $1`,
+             [generatedNormalizedTitle]
+           );
+           if (exist.rows.length > 0) {
+             finalAiCareer = exist.rows[0];
+           } else {
+             const cRes = await client.query(
+               `INSERT INTO careers (title, normalized_title, description, responsibilities, qualifications, entry_routes, origin, verification_status, record_status)
+                VALUES ($1, $2, $3, $4, $5, $6, 'ai_generated', 'unverified', 'published')
+                RETURNING id`,
+               [validData.title, generatedNormalizedTitle, validData.description, JSON.stringify(validData.responsibilities), JSON.stringify(validData.qualifications), JSON.stringify(validData.entry_routes)]
+             );
+             const cId = cRes.rows[0].id;
+
+             await client.query(
+               `INSERT INTO ai_career_profiles (id, title, normalized_title, description, responsibilities, qualifications, entry_routes, required_skills, related_careers, goa_relevance)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+               [cId, validData.title, generatedNormalizedTitle, validData.description, JSON.stringify(validData.responsibilities), JSON.stringify(validData.qualifications), JSON.stringify(validData.entry_routes), JSON.stringify(validData.required_skills), JSON.stringify(validData.related_careers), validData.goa_relevance]
+             );
+
+             for (const sk of validData.required_skills) {
+                const normSkill = normalizeString(sk.name);
+                if (!normSkill) continue;
+                let skId;
+                const skRes = await client.query(`SELECT id FROM skills WHERE normalized_name = $1 AND record_status = 'published'`, [normSkill]);
+                if (skRes.rows.length > 0) {
+                    skId = skRes.rows[0].id;
+                } else {
+                    const newSk = await client.query(
+                      `INSERT INTO skills (name, normalized_name, description, origin, verification_status, record_status) VALUES ($1, $2, $3, 'ai_generated', 'unverified', 'published') RETURNING id`, 
+                      [sk.name, normSkill, 'AI generated skill']
+                    );
+                    skId = newSk.rows[0].id;
+                }
+                const validImportance = ['required', 'important', 'useful'].includes(sk.importance?.toLowerCase()) ? sk.importance.toLowerCase() : 'useful';
+                await client.query(
+                  `INSERT INTO career_skills (career_id, skill_id, importance, origin, verification_status) VALUES ($1, $2, $3, 'ai_generated', 'unverified') ON CONFLICT (career_id, skill_id) DO NOTHING`, 
+                  [cId, skId, validImportance]
+                );
+             }
+
+             const inserted = await client.query(
+               `SELECT id as ai_career_id, title, description, responsibilities, qualifications, entry_routes,
+                       required_skills, related_careers, goa_relevance, status, pathway_draft
+                FROM ai_career_profiles WHERE id = $1`,
+               [cId]
+             );
+             finalAiCareer = inserted.rows[0];
+           }
+           await client.query('COMMIT');
+         } catch (e) {
+           await client.query('ROLLBACK');
+           throw e;
+         } finally {
+           client.release();
+         }
          
          return {
            data: {
-             ...inserted.rows[0],
+             ...finalAiCareer,
              origin: 'ai_generated',
              verified: false,
              disclaimer: 'This career was generated by AI and has not been verified.'
