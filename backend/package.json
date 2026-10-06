@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "node --watch src/server.js",
-    "start": "node src/server.js",
+    "start": "node scripts/migrate.js && node src/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "migrate": "node scripts/migrate.js",
