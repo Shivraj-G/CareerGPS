@@ -288,6 +288,7 @@ router.post('/explore', authenticate, exploreRateLimit, async (req, res, next) =
         });
       } catch (err) {
         clearTimeout(timeout);
+        console.error('[AI] Fetch error in /careers/explore:', err);
         const error = new Error('The AI service is currently unavailable.');
         error.status = 503; error.code = 'AI_UNAVAILABLE';
         throw error;
@@ -295,6 +296,8 @@ router.post('/explore', authenticate, exploreRateLimit, async (req, res, next) =
       clearTimeout(timeout);
 
       if (!aiRes.ok) {
+        const body = await aiRes.text();
+        console.error(`[AI] AI service returned HTTP ${aiRes.status}:`, body);
         const error = new Error('The AI service returned an error.');
         error.status = 503; error.code = 'AI_UNAVAILABLE';
         throw error;

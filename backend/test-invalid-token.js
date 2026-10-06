@@ -1,0 +1,1 @@
+async function run() { try { const res = await fetch('https://careergps-9z6g.onrender.com/internal/v1/health', { headers: { 'x-internal-service-token': 'INVALID_TOKEN' } }); console.log('STATUS:', res.status); const data = await res.text(); console.log('BODY:', data); } catch(e) { console.error('ERROR:', e.message); } } run();
