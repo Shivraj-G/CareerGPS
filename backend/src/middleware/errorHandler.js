@@ -9,7 +9,10 @@ export function errorHandler(err, req, res, _next) {
     path: req.originalUrl,
     status,
     code,
-    error: err.message
+    error: err.message,
+    stack: err.stack,
+    user: req.user?.id,
+    body: req.method !== 'GET' ? JSON.stringify(req.body).substring(0, 500) : undefined
   });
 
   res.status(status).json({
