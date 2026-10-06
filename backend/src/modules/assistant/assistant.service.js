@@ -55,12 +55,22 @@ async function retrieveContext(message, userId, conversationId) {
     ? `(title ILIKE ANY($1) OR COALESCE(description,'') ILIKE ANY($1))` 
     : '1=1';
 
+  const locationCondition = ilikeTerms.length > 0
+    ? `COALESCE(location,'') ILIKE ANY($1)`
+    : '1=1';
+
+  const pathwayCondition = ilikeTerms.length > 0
+    ? `(p.title ILIKE ANY($1) OR COALESCE(p.description,'') ILIKE ANY($1))`
+    : '1=1';
+
+  const params = ilikeTerms.length > 0 ? [ilikeTerms] : [];
+
   const queries = [
     pool.query(`SELECT education, experience, interests, preferred_locations, career_goal FROM user_profiles WHERE user_id = $1`, [userId]),
-    pool.query(`SELECT id, title, description, qualifications, entry_routes, source_url, source_document_url, verified_at FROM careers WHERE record_status = 'published' AND ${termCondition} ORDER BY title LIMIT 8`, ilikeTerms.length ? [ilikeTerms] : []),
-    pool.query(`SELECT id, title, organization, opportunity_type, location, status, application_deadline, description, source_url, source_document_url, verified_at FROM opportunities WHERE record_status = 'published' AND (${termCondition} OR COALESCE(location,'') ILIKE ANY($1)) ORDER BY application_deadline NULLS LAST LIMIT 8`, ilikeTerms.length ? [ilikeTerms] : []),
-    pool.query(`SELECT p.id, p.title, p.description, p.career_id, c.title AS career_title, p.source_url, p.source_document_url, p.verified_at FROM pathways p JOIN careers c ON c.id = p.career_id WHERE p.record_status = 'published' AND p.pathway_type = 'template' AND (${ilikeTerms.length > 0 ? `(p.title ILIKE ANY($1) OR COALESCE(p.description,'') ILIKE ANY($1))` : '1=1'}) ORDER BY p.title LIMIT 8`, ilikeTerms.length ? [ilikeTerms] : []),
-    pool.query(`SELECT c.id, c.title, c.description, c.location, c.source_url, c.source_document_url, c.verified_at FROM courses c WHERE c.record_status = 'published' AND (${termCondition}) ORDER BY c.title LIMIT 8`, ilikeTerms.length ? [ilikeTerms] : []),
+    pool.query(`SELECT id, title, description, qualifications, entry_routes, source_url, source_document_url, verified_at FROM careers WHERE record_status = 'published' AND ${termCondition} ORDER BY title LIMIT 8`, params),
+    pool.query(`SELECT id, title, organization, opportunity_type, location, status, application_deadline, description, source_url, source_document_url, verified_at FROM opportunities WHERE record_status = 'published' AND (${termCondition} OR ${locationCondition}) ORDER BY application_deadline NULLS LAST LIMIT 8`, params),
+    pool.query(`SELECT p.id, p.title, p.description, p.career_id, c.title AS career_title, p.source_url, p.source_document_url, p.verified_at FROM pathways p JOIN careers c ON c.id = p.career_id WHERE p.record_status = 'published' AND p.pathway_type = 'template' AND ${pathwayCondition} ORDER BY p.title LIMIT 8`, params),
+    pool.query(`SELECT c.id, c.title, c.description, c.location, c.source_url, c.source_document_url, c.verified_at FROM courses c WHERE c.record_status = 'published' AND (${termCondition}) ORDER BY c.title LIMIT 8`, params),
   ];
 
   const [profile, careers, opportunities, pathways, courses] = await Promise.all(queries);
