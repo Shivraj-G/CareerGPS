@@ -4837,8 +4837,7 @@ function SkillPicker({ userSkillIds, selectedSkills = [], toggleSkill, careerGoa
   }, [query]);
 
   useEffect(() => {
-    const activeContext = [careerGoal, educationContext].filter(Boolean).join(" ");
-    if (!activeContext) {
+    if (!educationContext && !careerGoal) {
       setRecommendedSkills([]);
       return;
     }
@@ -4847,7 +4846,10 @@ function SkillPicker({ userSkillIds, selectedSkills = [], toggleSkill, careerGoa
     const timer = setTimeout(() => {
       setRecsError(null);
       setLoadingRecs(true);
-      api.suggestSkills({ query: activeContext }, { signal: controller.signal })
+      api.suggestSkills({ 
+        education: educationContext || undefined, 
+        career_goal: careerGoal || undefined 
+      }, { signal: controller.signal })
         .then(res => setRecommendedSkills(unwrapList(res)))
         .catch((err) => {
           if (err.name === 'AbortError' || err.code === 'TIMEOUT') return;
