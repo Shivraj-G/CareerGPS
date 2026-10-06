@@ -936,11 +936,16 @@ function AppShell({ children }) {
             <button className="icon-btn">
               <Bell size={18} />
             </button>
-            <div className="avatar small">
+            <Link 
+              to="/profile" 
+              className="avatar small" 
+              aria-label="Open profile"
+              style={{ textDecoration: 'none', cursor: 'pointer' }}
+            >
               {(getLocalName(user?.id) || user?.email || "?")
                 .charAt(0)
                 .toUpperCase()}
-            </div>
+            </Link>
           </div>
         </header>
         <main className="page-content">{children}</main>
