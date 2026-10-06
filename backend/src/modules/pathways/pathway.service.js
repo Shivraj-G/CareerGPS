@@ -114,6 +114,25 @@ export async function generatePathway(userId, input) {
     );
     const requiredSkills = careerSkillsRes.rows;
 
+    if (env.AI_SERVICE_URL) {
+      const valRes = await callAi('/internal/v1/profiles/validate-goal', {
+        goal: careerRow.title,
+        profile: profile,
+        skills: userSkills,
+        careers: [careerRow]
+      }, 10000);
+      
+      if (valRes && valRes.goal_validity) {
+         if (valRes.goal_validity === 'INVALID' || valRes.goal_validity === 'AMBIGUOUS' || valRes.feasibility_status === 'FORMAL_REQUIREMENT_CONFLICT') {
+             const classification = valRes.goal_validity === 'INVALID' ? 'INVALID_GOAL' : (valRes.goal_validity === 'AMBIGUOUS' ? 'AMBIGUOUS_GOAL' : 'FORMAL_REQUIREMENT_CONFLICT');
+             const error = new Error(`Cannot generate pathway: ${classification}. ${valRes.reason}`);
+             error.statusCode = 422;
+             error.code = classification;
+             throw error;
+         }
+      }
+    }
+
     const matched = [];
     const missingRequired = [];
     const missingUseful = [];

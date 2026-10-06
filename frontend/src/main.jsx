@@ -2053,7 +2053,7 @@ function Onboarding() {
                     userSkillIds={new Set(form.skills.map(s => s.skill_id || s.id))}
                     toggleSkill={toggleSkill}
                     careerGoal={form.careerGoal}
-                    educationContext={form.educationLevel + (form.degree ? ` ${form.degree}` : '')}
+                    educationContext={[form.educationStage, form.stream, form.degree, form.specialization, form.industry, form.currentRole].filter(Boolean).join(' ')}
                   />
                 ))}
 
