@@ -51,8 +51,8 @@ def _api_key(provider: str) -> str:
 
 def model_name(provider: str) -> str:
     if provider == "gemini":
-        return _env("GEMINI_MODEL", "gemini-1.5-flash")
-    return _env("GROQ_MODEL", "llama-3.1-8b-instant")
+        return _env("GEMINI_MODEL", "gemini-3.8-flash")
+    return _env("GROQ_MODEL", "openai/gpt-oss-20b")
 
 
 def provider_chain() -> list[str]:
