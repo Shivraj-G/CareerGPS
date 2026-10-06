@@ -122,9 +122,9 @@ export async function generatePathway(userId, input) {
         careers: [careerRow]
       }, 10000);
       
-      if (valRes && valRes.goal_validity) {
-         if (valRes.goal_validity === 'INVALID' || valRes.goal_validity === 'AMBIGUOUS' || valRes.feasibility_status === 'FORMAL_REQUIREMENT_CONFLICT') {
-             const classification = valRes.goal_validity === 'INVALID' ? 'INVALID_GOAL' : (valRes.goal_validity === 'AMBIGUOUS' ? 'AMBIGUOUS_GOAL' : 'FORMAL_REQUIREMENT_CONFLICT');
+      if (valRes && valRes.classification) {
+         if (valRes.classification === 'INVALID_GOAL' || valRes.classification === 'RED') {
+             const classification = valRes.classification;
              const error = new Error(`Cannot generate pathway: ${classification}. ${valRes.reason}`);
              error.statusCode = 422;
              error.code = classification;

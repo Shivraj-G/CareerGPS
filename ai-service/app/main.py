@@ -1292,38 +1292,31 @@ def careers_enrich(request: CareerEnrichRequest, x_internal_service_token: str |
 
 GOAL_VALIDATE_SYSTEM = (
     "You are CareerGPS's career validation engine. A user provides their career goal and their current profile (education, experience, skills).\n"
-    "You must perform two distinct tasks:\n"
-    "TASK 1: GOAL VALIDITY\n"
-    "Determine whether the user's text represents a meaningful career, occupation, profession, business, or legitimate livelihood goal.\n"
-    "Classify 'goal_validity' into exactly one of:\n"
-    "- 'VALID': It is a meaningful career/occupation (e.g. 'Machine Learning Engineer', 'Teacher', 'Farmer', 'Shop Owner'). Do not reject informal occupations.\n"
-    "- 'INVALID': It is nonsense, non-career, abusive, or a meaningless goal statement (e.g. 'Beggar', 'asdfgh', 'nothing', 'sleep').\n"
-    "- 'AMBIGUOUS': The goal is too broad or multiple (e.g. 'business', 'tech', 'software engineer or ai engineer').\n"
-    "TASK 2: CAREER RESOLUTION AND FEASIBILITY (Only if VALID)\n"
-    "If VALID, determine 'career_resolution' as 'KNOWN' if it matches one of the provided 'AVAILABLE CATALOGUE CAREERS', else 'UNKNOWN'.\n"
-    "If VALID, evaluate feasibility ('feasibility_status') into exactly one of:\n"
-    "- 'DIRECT_FIT': The user's current education/background is already reasonably aligned with the career.\n"
-    "- 'PATHWAY_REQUIRED': The career is achievable, but the user will need additional education, skills, experience, or a transition pathway.\n"
-    "- 'FORMAL_REQUIREMENT_CONFLICT': There is a significant formal educational/licensing requirement that the current profile does not satisfy and cannot realistically transition to without starting over.\n"
-    "- 'UNKNOWN': It is a real career, but you don't have enough structured requirements to determine feasibility.\n"
+    "You must perform a HOLISTIC EDUCATIONAL EVALUATION: Evaluate '12th Stream -> Bachelor\\'s Degree -> Career Goal'. The 12th stream is foundational information and MUST NOT be ignored.\n"
+    "Determine the classification using the following rules:\n"
+    "GREEN: HIGHLY ALIGNED & FEASIBLE. 12th stream is compatible, Bachelor's degree is compatible, Career goal is a standard/logical progression. No major formal prerequisite conflict exists.\n"
+    "YELLOW: CHALLENGING PIVOT / HARD BUT POSSIBLE. Bachelor's degree does not directly align, BUT the user's foundational education or transferable background makes the goal realistically pursuable OR substantial additional education/skills/experience are required BUT there is no fundamental educational impossibility.\n"
+    "RED: FUNDAMENTALLY INCOMPATIBLE. Genuine fundamental conflict. The goal requires formal prerequisites that the user's 12th Stream AND Bachelor's Degree do not satisfy, and the normal route cannot be treated as a direct continuation.\n"
+    "INVALID_GOAL: Nonsense, non-career, abusive, or meaningless goal statement. However, DO NOT reject legitimate occupations (e.g. Chef, Electrician, Plumber, Entrepreneur) merely because they don't require a bachelor's degree.\n"
+    "ABSOLUTELY NO FAKE BRIDGE COURSES. AI cannot invent fictional shortcuts or fake degrees. Use structured CareerGPS database career requirements as the source of truth.\n"
     "Respond ONLY with a JSON object matching this schema:\n"
     "{\n"
-    "  \"goal\": \"<normalized goal name from catalogue if matched, or cleanly formatted original>\",\n"
-    "  \"goal_validity\": \"VALID|INVALID|AMBIGUOUS\",\n"
-    "  \"career_resolution\": \"KNOWN|UNKNOWN|null\",\n"
-    "  \"feasibility_status\": \"DIRECT_FIT|PATHWAY_REQUIRED|FORMAL_REQUIREMENT_CONFLICT|UNKNOWN|null\",\n"
-    "  \"reason\": \"<For VALID goals: a polite, constructive and highly encouraging feasibility explanation. For INVALID: Please enter a valid career or occupation goal... For AMBIGUOUS: Could you be more specific... max 3 sentences>\",\n"
-    "  \"formal_barriers\": [\"barrier1\"],\n"
+    "  \"classification\": \"GREEN|YELLOW|RED|INVALID_GOAL\",\n"
+    "  \"goal_valid\": true,\n"
+    "  \"career_name\": \"<normalized goal name from catalogue if matched, or original>\",\n"
+    "  \"education_assessment\": {\n"
+    "    \"twelfth_stream\": { \"status\": \"ALIGNED|NOT_ALIGNED\", \"reason\": \"...\" },\n"
+    "    \"bachelors_degree\": { \"status\": \"ALIGNED|NOT_ALIGNED\", \"reason\": \"...\" }\n"
+    "  },\n"
+    "  \"formal_requirements\": [\"barrier1\"],\n"
     "  \"missing_requirements\": [\"req1\"],\n"
-    "  \"skill_gaps\": [\"gap1\"],\n"
-    "  \"recommended_route\": [\"step1\", \"step2\"],\n"
-    "  \"suggested_alternatives\": [\"alt1\", \"alt2\"]\n"
+    "  \"additional_preparation\": [\"step1\"],\n"
+    "  \"reason\": \"<For GREEN: Highly aligned. Your education provides a strong foundation... For YELLOW: Challenging path, but achievable... explain detour honestly and encouragingly. For RED: Career Conflict. Your current educational background does not satisfy... For INVALID_GOAL: Please enter a valid career or professional goal.>\",\n"
+    "  \"encouragement\": \"<For YELLOW: highly encouraging statement>\",\n"
+    "  \"can_continue\": true,\n"
+    "  \"can_generate_pathway\": true\n"
     "}\n"
-    "CRITICAL TONE RULES:\n"
-    "- For PATHWAY_REQUIRED, the 'reason' MUST be highly encouraging (e.g., 'You can pursue this career. Your current background gives you a starting point, and you may need some additional preparation.'). Do not use negative phrasing like 'does not follow the most direct route'.\n"
-    "- For DIRECT_FIT, the 'reason' MUST be positive (e.g. 'Your current education and background are a strong match').\n"
-    "- For FORMAL_REQUIREMENT_CONFLICT, be clear and honest about the requirement conflict.\n"
-    "- For INVALID, do not judge the user, just ask for a valid career or occupation.\n"
+    "Set can_continue and can_generate_pathway to true for GREEN and YELLOW, and false for RED and INVALID_GOAL."
 )
 
 @app.post("/internal/v1/profiles/validate-goal")
@@ -1351,10 +1344,10 @@ def profiles_validate_goal(request: GoalValidateRequest, x_internal_service_toke
     
     parsed = llm.chat_json(GOAL_VALIDATE_SYSTEM, [{"role": "user", "content": context_str}], max_tokens=600, temperature=0.3, budget=REC_BUDGET)
     
-    if not parsed or not isinstance(parsed, dict) or "goal_validity" not in parsed:
+    if not parsed or not isinstance(parsed, dict) or "classification" not in parsed:
         return {
             "goal": request.goal,
-            "classification": "DIRECT_FIT",
+            "classification": "GREEN",
             "reason": "Validation timed out; proceeding.",
             "profile_gaps": [],
             "suggested_goals": [],
@@ -1362,27 +1355,21 @@ def profiles_validate_goal(request: GoalValidateRequest, x_internal_service_toke
             "ai_generated": False
         }
     
-    goal_validity = parsed.get("goal_validity")
-    feasibility = parsed.get("feasibility_status")
-    
-    if goal_validity == "INVALID":
-        classification = "INVALID_GOAL"
-    elif goal_validity == "AMBIGUOUS":
-        classification = "AMBIGUOUS_GOAL"
-    else:
-        classification = feasibility if feasibility in ["DIRECT_FIT", "PATHWAY_REQUIRED", "FORMAL_REQUIREMENT_CONFLICT", "UNKNOWN"] else "DIRECT_FIT"
+    classification = parsed.get("classification")
+    if classification not in ["GREEN", "YELLOW", "RED", "INVALID_GOAL"]:
+        classification = "GREEN"
         
     return {
-        "goal": parsed.get("goal") or request.goal,
+        "goal": parsed.get("career_name") or request.goal,
         "classification": classification,
-        "goal_validity": goal_validity,
-        "career_resolution": parsed.get("career_resolution"),
+        "goal_validity": "INVALID" if classification == "INVALID_GOAL" else "VALID",
+        "career_resolution": "KNOWN" if parsed.get("career_name") else "UNKNOWN",
         "reason": parsed.get("reason", "Your career goal aligns with your profile."),
-        "formal_barriers": _str_list(parsed.get("formal_barriers", []), 5, 100),
+        "formal_barriers": _str_list(parsed.get("formal_requirements", []), 5, 100),
         "missing_requirements": _str_list(parsed.get("missing_requirements", []), 5, 100),
-        "skill_gaps": _str_list(parsed.get("skill_gaps", []), 5, 100),
-        "recommended_route": _str_list(parsed.get("recommended_route", []), 5, 100),
-        "suggested_goals": _str_list(parsed.get("suggested_alternatives", []), 5, 50),
-        "allow_continue": classification not in ["FORMAL_REQUIREMENT_CONFLICT", "INVALID_GOAL", "AMBIGUOUS_GOAL"],
+        "skill_gaps": _str_list(parsed.get("additional_preparation", []), 5, 100),
+        "recommended_route": _str_list(parsed.get("additional_preparation", []), 5, 100),
+        "suggested_goals": [],
+        "allow_continue": parsed.get("can_continue", classification in ["GREEN", "YELLOW"]),
         "ai_generated": True
     }

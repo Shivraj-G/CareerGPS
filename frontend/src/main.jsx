@@ -1761,7 +1761,7 @@ function Onboarding() {
     }
     const validationKey = `${form.careerGoal}::${currentProfileContext}`;
     if (validationData && lastValidatedGoal === validationKey) {
-      if (['FORMAL_REQUIREMENT_CONFLICT', 'INVALID_GOAL', 'AMBIGUOUS_GOAL'].includes(validationData.classification)) return;
+      if (['RED', 'INVALID_GOAL'].includes(validationData.classification)) return;
       return finish();
     }
     setIsValidating(true);
@@ -1775,7 +1775,7 @@ function Onboarding() {
       const data = unwrapObject(valRes);
       setValidationData(data);
       setLastValidatedGoal(validationKey);
-      if (data.classification !== 'FORMAL_REQUIREMENT_CONFLICT') {
+      if (data.classification !== 'RED') {
         return finish();
       }
     } catch (err) {
@@ -2106,30 +2106,29 @@ function Onboarding() {
                         marginTop: 12,
                         padding: 16,
                         borderRadius: 8,
-                        border: `1px solid ${['FORMAL_REQUIREMENT_CONFLICT', 'INVALID_GOAL', 'AMBIGUOUS_GOAL'].includes(validationData.classification) ? 'var(--red)' : validationData.classification === 'PATHWAY_REQUIRED' ? '#eab308' : validationData.classification === 'DIRECT_FIT' ? 'var(--green)' : 'var(--text-muted)'}`,
-                        background: ['FORMAL_REQUIREMENT_CONFLICT', 'INVALID_GOAL', 'AMBIGUOUS_GOAL'].includes(validationData.classification) ? 'rgba(255,0,0,0.05)' : validationData.classification === 'PATHWAY_REQUIRED' ? 'rgba(234,179,8,0.05)' : validationData.classification === 'DIRECT_FIT' ? 'rgba(0,128,0,0.05)' : 'rgba(0,0,0,0.05)'
+                        border: `1px solid ${['RED', 'INVALID_GOAL'].includes(validationData.classification) ? 'var(--red)' : validationData.classification === 'YELLOW' ? '#eab308' : validationData.classification === 'GREEN' ? 'var(--green)' : 'var(--text-muted)'}`,
+                        background: ['RED', 'INVALID_GOAL'].includes(validationData.classification) ? 'rgba(255,0,0,0.05)' : validationData.classification === 'YELLOW' ? 'rgba(234,179,8,0.05)' : validationData.classification === 'GREEN' ? 'rgba(0,128,0,0.05)' : 'rgba(0,0,0,0.05)'
                       }}>
                         <h4 style={{
                           marginBottom: 8,
                           display: 'flex', alignItems: 'center', gap: 6,
-                          color: ['FORMAL_REQUIREMENT_CONFLICT', 'INVALID_GOAL', 'AMBIGUOUS_GOAL'].includes(validationData.classification) ? 'var(--red)' : validationData.classification === 'PATHWAY_REQUIRED' ? '#ca8a04' : validationData.classification === 'DIRECT_FIT' ? 'var(--green)' : 'var(--text-muted)'
+                          color: ['RED', 'INVALID_GOAL'].includes(validationData.classification) ? 'var(--red)' : validationData.classification === 'YELLOW' ? '#ca8a04' : validationData.classification === 'GREEN' ? 'var(--green)' : 'var(--text-muted)'
                         }}>
                           {validationData.classification === 'INVALID_GOAL' ? <><XCircle size={18} /> Invalid Goal</> :
-                            validationData.classification === 'AMBIGUOUS_GOAL' ? <><HelpCircle size={18} /> Ambiguous Goal</> :
-                              ['FORMAL_REQUIREMENT_CONFLICT', 'INVALID_GOAL', 'AMBIGUOUS_GOAL'].includes(validationData.classification) ? <><XCircle size={18} /> Formal requirement conflict</> :
-                                validationData.classification === 'PATHWAY_REQUIRED' ? <><CheckCircle size={18} /> You're on your way</> :
+                              ['RED', 'INVALID_GOAL'].includes(validationData.classification) ? <><XCircle size={18} /> Career Conflict</> :
+                                validationData.classification === 'YELLOW' ? <><CheckCircle size={18} /> Challenging path, but achievable</> :
                                   validationData.classification === 'NOT_FOUND' ? <><HelpCircle size={18} /> Career not found</> :
                                     validationData.classification === 'UNKNOWN' ? <><HelpCircle size={18} /> Career requirements unavailable</> :
-                                      <><CheckCircle size={18} /> Directly aligned</>}
+                                      <><CheckCircle size={18} /> Highly aligned</>}
                         </h4>
 
                         <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
-                          {validationData.classification === 'DIRECT_FIT' && (
-                            <p>Your current education and background are a strong match for this career.</p>
+                          {validationData.classification === 'GREEN' && (
+                            <p>{validationData.reason || "Your education provides a strong foundation for this career."}</p>
                           )}
-                          {validationData.classification === 'PATHWAY_REQUIRED' && (
+                          {validationData.classification === 'YELLOW' && (
                             <>
-                              <p style={{ marginBottom: 12 }}>You can pursue this career. Your current background gives you a starting point, and you may need some additional preparation along the way.</p>
+                              <p style={{ marginBottom: 12 }}>{validationData.reason || "Your current education is not the standard route, but this career can still be pursued with additional preparation."}</p>
                               {validationData.missing_requirements?.length > 0 && (
                                 <div style={{ marginBottom: 12 }}>
                                   <strong>Your next steps:</strong>
@@ -2139,17 +2138,17 @@ function Onboarding() {
                                   </ul>
                                 </div>
                               )}
+                              {validationData.encouragement && (
+                                <p style={{ margin: 0, color: 'var(--brand)', fontWeight: 500 }}>{validationData.encouragement}</p>
+                              )}
                             </>
                           )}
                           {validationData.classification === 'INVALID_GOAL' && (
                             <p>{validationData.reason || "Please enter a valid career or occupation."}</p>
                           )}
-                          {validationData.classification === 'AMBIGUOUS_GOAL' && (
-                            <p>{validationData.reason || "Could you be more specific about your career goal?"}</p>
-                          )}
-                          {['FORMAL_REQUIREMENT_CONFLICT', 'INVALID_GOAL', 'AMBIGUOUS_GOAL'].includes(validationData.classification) && (
+                          {['RED', 'INVALID_GOAL'].includes(validationData.classification) && (
                             <>
-                              <p style={{ marginBottom: 12 }}>Your current education does not satisfy a formal requirement for this career.</p>
+                              <p style={{ marginBottom: 12 }}>{validationData.reason || "Your current educational background does not satisfy the formal prerequisites for this career."}</p>
                               {validationData.formal_barriers?.length > 0 && (
                                 <div style={{ marginBottom: 12 }}>
                                   <strong>Required:</strong>
@@ -2158,17 +2157,9 @@ function Onboarding() {
                                   </ul>
                                 </div>
                               )}
-                              {validationData.recommended_route?.length > 0 && (
-                                <div style={{ marginBottom: 12 }}>
-                                  <strong>Possible route:</strong>
-                                  <ol style={{ marginLeft: 20, marginTop: 4 }}>
-                                    {validationData.recommended_route.map((step, idx) => <li key={`step-${idx}`}>{step}</li>)}
-                                  </ol>
-                                </div>
-                              )}
-                              <p>Consider changing your career goal or following the required education pathway.</p>
                             </>
                           )}
+
                           {validationData.classification === 'UNKNOWN' && (
                             <p>This appears to be a recognized career, but we don't have detailed prerequisite rules for it yet. You can still proceed.</p>
                           )}
@@ -2179,10 +2170,7 @@ function Onboarding() {
                           {validationData.classification === 'INVALID_GOAL' && (
                             <p>{validationData.reason || "Please enter a valid career or occupation."}</p>
                           )}
-                          {validationData.classification === 'AMBIGUOUS_GOAL' && (
-                            <p>{validationData.reason || "Could you be more specific about your career goal?"}</p>
-                          )}
-                          {['FORMAL_REQUIREMENT_CONFLICT', 'INVALID_GOAL', 'AMBIGUOUS_GOAL'].includes(validationData.classification) && (
+                          {['RED', 'INVALID_GOAL'].includes(validationData.classification) && (
                             <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
                               <button
                                 className="btn outline sm"
@@ -2208,7 +2196,7 @@ function Onboarding() {
                   className="btn ghost"
                   disabled={step === 1 || isValidating || submitting}
                   onClick={() => {
-                    if (validationData && ['FORMAL_REQUIREMENT_CONFLICT', 'INVALID_GOAL', 'AMBIGUOUS_GOAL'].includes(validationData.classification)) {
+                    if (validationData && ['RED', 'INVALID_GOAL'].includes(validationData.classification)) {
                       setValidationData(null);
                       setLastValidatedGoal("");
                     } else {
@@ -2220,10 +2208,10 @@ function Onboarding() {
                 </button>
 
                 {step === 4 ? (
-                  (!validationData || ['FORMAL_REQUIREMENT_CONFLICT', 'INVALID_GOAL', 'AMBIGUOUS_GOAL'].includes(validationData.classification)) ? (
+                  (!validationData || ['RED', 'INVALID_GOAL'].includes(validationData.classification)) ? (
                     <button
                       className="btn primary"
-                      disabled={submitting || isValidating || (validationData && ['FORMAL_REQUIREMENT_CONFLICT', 'INVALID_GOAL', 'AMBIGUOUS_GOAL'].includes(validationData.classification))}
+                      disabled={submitting || isValidating || (validationData && ['RED', 'INVALID_GOAL'].includes(validationData.classification))}
                       onClick={validateAndFinish}
                     >
                       {submitting ? "Saving..." : "Finish"} <ArrowRight />
@@ -2234,7 +2222,7 @@ function Onboarding() {
                       disabled={submitting || isValidating}
                       onClick={finish}
                     >
-                      {submitting ? "Saving..." : validationData.classification === 'DIRECT_FIT' ? "Continue" : "Continue with this goal"} <ArrowRight />
+                      {submitting ? "Saving..." : validationData.classification === 'GREEN' ? "Continue" : "Continue with this goal"} <ArrowRight />
                     </button>
                   )
                 ) : (
@@ -5287,7 +5275,7 @@ function Profile() {
       setIsValidating(false);
     }
 
-    if (currentValidation && currentValidation.classification === 'FORMAL_REQUIREMENT_CONFLICT') {
+    if (currentValidation && currentValidation.classification === 'RED') {
       setError("Please fix your career goal before saving. Your current profile does not satisfy formal requirements.");
       return;
     }
@@ -5468,26 +5456,25 @@ function Profile() {
                     marginBottom: 12,
                     fontSize: 13,
                     fontWeight: 600,
-                    border: `1px solid ${['FORMAL_REQUIREMENT_CONFLICT', 'INVALID_GOAL', 'AMBIGUOUS_GOAL'].includes(validationData.classification) ? 'var(--red)' : validationData.classification === 'PATHWAY_REQUIRED' ? '#eab308' : validationData.classification === 'DIRECT_FIT' ? 'var(--green)' : 'var(--text-muted)'}`,
-                    background: ['FORMAL_REQUIREMENT_CONFLICT', 'INVALID_GOAL', 'AMBIGUOUS_GOAL'].includes(validationData.classification) ? 'rgba(255,0,0,0.05)' : validationData.classification === 'PATHWAY_REQUIRED' ? 'rgba(234,179,8,0.05)' : validationData.classification === 'DIRECT_FIT' ? 'rgba(0,128,0,0.05)' : 'rgba(0,0,0,0.05)',
-                    color: ['FORMAL_REQUIREMENT_CONFLICT', 'INVALID_GOAL', 'AMBIGUOUS_GOAL'].includes(validationData.classification) ? 'var(--red)' : validationData.classification === 'PATHWAY_REQUIRED' ? '#ca8a04' : validationData.classification === 'DIRECT_FIT' ? 'var(--green)' : 'var(--text-muted)'
+                    border: `1px solid ${['RED', 'INVALID_GOAL'].includes(validationData.classification) ? 'var(--red)' : validationData.classification === 'YELLOW' ? '#eab308' : validationData.classification === 'GREEN' ? 'var(--green)' : 'var(--text-muted)'}`,
+                    background: ['RED', 'INVALID_GOAL'].includes(validationData.classification) ? 'rgba(255,0,0,0.05)' : validationData.classification === 'YELLOW' ? 'rgba(234,179,8,0.05)' : validationData.classification === 'GREEN' ? 'rgba(0,128,0,0.05)' : 'rgba(0,0,0,0.05)',
+                    color: ['RED', 'INVALID_GOAL'].includes(validationData.classification) ? 'var(--red)' : validationData.classification === 'YELLOW' ? '#ca8a04' : validationData.classification === 'GREEN' ? 'var(--green)' : 'var(--text-muted)'
                   }}>
                     {validationData.classification === 'INVALID_GOAL' ? <><XCircle size={16} /> Invalid Goal</> :
-                      validationData.classification === 'AMBIGUOUS_GOAL' ? <><HelpCircle size={16} /> Ambiguous Goal</> :
-                        ['FORMAL_REQUIREMENT_CONFLICT', 'INVALID_GOAL', 'AMBIGUOUS_GOAL'].includes(validationData.classification) ? <><XCircle size={16} /> Formal requirement conflict</> :
-                          validationData.classification === 'PATHWAY_REQUIRED' ? <><CheckCircle size={16} /> You're on your way</> :
+                        ['RED', 'INVALID_GOAL'].includes(validationData.classification) ? <><XCircle size={16} /> Career Conflict</> :
+                          validationData.classification === 'YELLOW' ? <><CheckCircle size={16} /> Challenging path, but achievable</> :
                             validationData.classification === 'NOT_FOUND' ? <><HelpCircle size={16} /> Career not found</> :
                               validationData.classification === 'UNKNOWN' ? <><HelpCircle size={16} /> Career requirements unavailable</> :
-                                <><CheckCircle size={16} /> Directly aligned</>}
+                                <><CheckCircle size={16} /> Highly aligned</>}
                   </div>
 
                   <div style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.5 }}>
-                    {validationData.classification === 'DIRECT_FIT' && (
-                      <p style={{ margin: 0 }}>Your current education and background are a strong match for this career.</p>
+                    {validationData.classification === 'GREEN' && (
+                      <p style={{ margin: 0 }}>{validationData.reason || "Your education provides a strong foundation for this career."}</p>
                     )}
-                    {validationData.classification === 'PATHWAY_REQUIRED' && (
+                    {validationData.classification === 'YELLOW' && (
                       <>
-                        <p style={{ margin: '0 0 12px 0' }}>You can pursue this career. Your current background gives you a starting point, and you may need some additional preparation along the way.</p>
+                        <p style={{ margin: '0 0 12px 0' }}>{validationData.reason || "Your current education is not the standard route, but this career can still be pursued with additional preparation."}</p>
                         {validationData.missing_requirements?.length > 0 && (
                           <div>
                             <strong style={{ fontSize: 13, fontWeight: 600 }}>Your next steps:</strong>
@@ -5502,12 +5489,9 @@ function Profile() {
                     {validationData.classification === 'INVALID_GOAL' && (
                       <p style={{ margin: 0 }}>{validationData.reason || "Please enter a valid career or occupation."}</p>
                     )}
-                    {validationData.classification === 'AMBIGUOUS_GOAL' && (
-                      <p style={{ margin: 0 }}>{validationData.reason || "Could you be more specific about your career goal?"}</p>
-                    )}
-                    {['FORMAL_REQUIREMENT_CONFLICT', 'INVALID_GOAL', 'AMBIGUOUS_GOAL'].includes(validationData.classification) && (
+                    {validationData.classification === 'RED' && (
                       <>
-                        <p style={{ margin: '0 0 12px 0' }}>Your current education does not satisfy a formal requirement for this career.</p>
+                        <p style={{ margin: '0 0 12px 0' }}>{validationData.reason || "Your current educational background does not satisfy the formal prerequisites for this career."}</p>
                         {validationData.formal_barriers?.length > 0 && (
                           <div>
                             <strong style={{ fontSize: 13, fontWeight: 600 }}>Required education:</strong>

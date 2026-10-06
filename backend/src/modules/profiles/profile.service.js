@@ -67,10 +67,10 @@ export async function updateProfile(userId, input) {
             });
             if (aiRes.ok) {
               const aiData = await aiRes.json();
-              if (aiData.goal_validity === 'INVALID' || aiData.goal_validity === 'AMBIGUOUS' || aiData.feasibility_status === 'FORMAL_REQUIREMENT_CONFLICT') {
+              if (aiData.classification === 'INVALID_GOAL' || aiData.classification === 'RED') {
                 const err = new Error(aiData.reason || 'Please enter a valid career or occupation goal.');
                 err.statusCode = 422;
-                err.code = aiData.goal_validity === 'INVALID' ? 'INVALID_GOAL' : (aiData.goal_validity === 'AMBIGUOUS' ? 'AMBIGUOUS_GOAL' : 'FORMAL_REQUIREMENT_CONFLICT');
+                err.code = aiData.classification;
                 throw err;
               }
             }
@@ -78,7 +78,7 @@ export async function updateProfile(userId, input) {
             clearTimeout(aiTimeout);
           }
         } catch (err) {
-          if (['INVALID_GOAL', 'AMBIGUOUS_GOAL', 'FORMAL_REQUIREMENT_CONFLICT'].includes(err.code)) throw err;
+          if (['INVALID_GOAL', 'RED'].includes(err.code)) throw err;
           // AI validation failure is non-fatal — log and continue saving
           import('../../utils/logger.js').then(({ logger }) =>
             logger.warn('[profile.service] Goal validation failed silently', { message: err.message })
