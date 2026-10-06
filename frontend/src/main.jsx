@@ -2529,6 +2529,8 @@ function Careers() {
   const [notACareerReason, setNotACareerReason] = useState(null);
 
   const abortControllerRef = useRef(null);
+  
+  const hasActiveSearch = (searchParams.get("search") || "").trim().length > 0;
 
   function load(search) {
     if (abortControllerRef.current) {
@@ -2607,6 +2609,9 @@ function Careers() {
       });
       return;
     }
+    if ((searchParams.get("search") || "").trim().length > 0) {
+      runSearch("");
+    }
     setRecommending(true);
     setRecError(null);
     try {
@@ -2672,14 +2677,14 @@ function Careers() {
           </button>
         </div>
 
-        {recError && (
+        {recError && !hasActiveSearch && (
           <ErrorState
             text={recError.message}
             status={recError.status}
             onRetry={findCareersForMe}
           />
         )}
-        {recommendation && (
+        {recommendation && !hasActiveSearch && (
           <div style={{ marginBottom: 24, padding: '24px 28px', background: '#fff', borderRadius: 16, border: '1px solid var(--line)', boxShadow: '0 4px 20px rgba(30,42,62,0.03)', position: 'relative', animation: 'fade-in 0.3s ease-out' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
               <div>
