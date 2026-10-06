@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import ReactDOM from "react-dom/client";
 import {
   BrowserRouter,
@@ -2528,22 +2528,31 @@ function Careers() {
 
   const [notACareerReason, setNotACareerReason] = useState(null);
 
+  const abortControllerRef = useRef(null);
+
   function load(search) {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const signal = controller.signal;
+
     let active = true;
     setStatus("loading");
     setError(null);
     setNotACareerReason(null);
     api
-      .careers(search ? { search } : {})
+      .careers(search ? { search } : {}, { signal })
       .then(async (data) => {
-        if (!active) return;
+        if (!active || signal.aborted) return;
         const results = unwrapList(data).map(normalizeCareer);
 
         if (results.length === 0 && search && search.length <= 120 && getToken()) {
           setStatus("exploring");
           try {
-            const exploreRes = await api.exploreCareer({ query: search });
-            if (!active) return;
+            const exploreRes = await api.exploreCareer({ query: search }, { signal });
+            if (!active || signal.aborted) return;
             if (exploreRes.status === "not_a_career") {
               setNotACareerReason(exploreRes.reason);
               setStatus("not_a_career");
@@ -2555,7 +2564,7 @@ function Careers() {
               setStatus("ready");
             }
           } catch (err) {
-            if (!active) return;
+            if (!active || signal.aborted) return;
             if (err?.code === 'AI_UNAVAILABLE' || err?.status === 503) {
               setError(new Error("AI generation is currently unavailable. No careers found."));
             } else {
@@ -2569,12 +2578,13 @@ function Careers() {
         }
       })
       .catch((err) => {
-        if (!active) return;
+        if (!active || signal.aborted || err.code === 'CANCELLED') return;
         setError(err);
         setStatus("error");
       });
     return () => {
       active = false;
+      controller.abort();
     };
   }
   useEffect(() => load(searchParams.get("search") || ""), []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -2654,10 +2664,10 @@ function Careers() {
             aria-label="Search careers"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && runSearch(query)}
+            onKeyDown={(e) => e.key === "Enter" && status !== "loading" && status !== "exploring" && runSearch(query)}
             placeholder="Search careers by title, skill or keyword"
           />
-          <button type="button" onClick={() => runSearch(query)}>
+          <button type="button" onClick={() => runSearch(query)} disabled={status === "loading" || status === "exploring"}>
             Search
           </button>
         </div>

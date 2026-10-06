@@ -129,6 +129,11 @@ async function request(path, options = {}) {
   } catch (networkErr) {
     clearTimeout(timeout);
     const isAbort = networkErr.name === "AbortError";
+    const isManualAbort = options.signal && options.signal.aborted;
+    
+    if (isManualAbort) {
+      throw new ApiError("Request cancelled.", { status: 0, code: "CANCELLED", isNetworkError: true, isManualAbort: true });
+    }
     throw new ApiError(fallbackMessage(0, !isAbort), { status: 0, code: isAbort ? "TIMEOUT" : "NETWORK_ERROR", isNetworkError: true });
   }
   clearTimeout(timeout);
@@ -184,9 +189,9 @@ export const api = {
   // --- Careers (src/modules/careers, public) --------------------------
   // GET /careers only supports `search`, `page`, `limit` - there is no
   // industry/location/education/career-type filter on the backend.
-  careers: (params = {}) => get(`/careers${buildQuery(params)}`),
-  exploreCareer: (body) => post(`/careers/explore`, body),
-  career: (id) => get(`/careers/${id}`),
+  careers: (params = {}, opts = {}) => get(`/careers${buildQuery(params)}`, opts),
+  exploreCareer: (body, opts = {}) => post(`/careers/explore`, body, opts),
+  career: (id, opts = {}) => get(`/careers/${id}`, opts),
   careerSkills: (id) => get(`/careers/${id}/skills`),
   careerCourses: (id) => get(`/careers/${id}/courses`),
   careerPathways: (id) => get(`/careers/${id}/pathways`),
