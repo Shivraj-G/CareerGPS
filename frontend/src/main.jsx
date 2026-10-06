@@ -1426,7 +1426,9 @@ function Onboarding() {
       setProgramsLoading(true);
       api.educationPrograms(form.stream).then(res => {
         const programs = res.data || [];
-        setAvailablePrograms(programs);
+        const excluded = ["Masters", "Other", "MBA", "MCA"];
+        const displayPrograms = programs.filter(p => !excluded.includes(p) || p === form.degree);
+        setAvailablePrograms(displayPrograms);
         if (form.degree && !programs.includes(form.degree)) {
           setForm(prev => ({ ...prev, degree: "" }));
           setError("Your selected program is not compatible with this stream. Please select another program.");
@@ -1990,6 +1992,9 @@ function Onboarding() {
                                 ))}
                                 {availablePrograms.length === 0 && !form.stream && (
                                   <option disabled>Select 12th Stream first</option>
+                                )}
+                                {availablePrograms.length === 0 && form.stream && (
+                                  <option disabled>No eligible bachelor's programs found for the selected subjects.</option>
                                 )}
                               </select>
                             )}
@@ -4987,7 +4992,9 @@ function Profile() {
       setProgramsLoading(true);
       api.educationPrograms(form.stream).then(res => {
         const programs = res.data || [];
-        setAvailablePrograms(programs);
+        const excluded = ["Masters", "Other", "MBA", "MCA"];
+        const displayPrograms = programs.filter(p => !excluded.includes(p) || p === form.degree);
+        setAvailablePrograms(displayPrograms);
         if (form.degree && !programs.includes(form.degree)) {
           setForm(prev => ({ ...prev, degree: "" }));
           setError("Your selected program is not compatible with this stream. Please select another program.");
@@ -5597,6 +5604,7 @@ function Profile() {
                               <option value="">Select Program</option>
                               {availablePrograms.map(p => <option key={p} value={p}>{p}</option>)}
                               {availablePrograms.length === 0 && !form.stream && <option disabled>Select 12th Stream first</option>}
+                              {availablePrograms.length === 0 && form.stream && <option disabled>No eligible bachelor's programs found for the selected subjects.</option>}
                             </select>
                           )}
                         </label>
