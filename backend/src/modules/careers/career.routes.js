@@ -22,7 +22,7 @@ router.get('/', async (req, res, next) => {
     const { page, limit, offset } = pagination(req);
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
     const values = [search];
-    const where = `WHERE c.record_status = 'published' AND ($1 = '' OR c.title ILIKE '%' || $1 || '%' OR c.description ILIKE '%' || $1 || '%')`;
+    const where = `WHERE c.record_status IN ('published', 'needs_review') AND ($1 = '' OR c.title ILIKE '%' || $1 || '%' OR c.description ILIKE '%' || $1 || '%')`;
     const count = await pool.query(`SELECT COUNT(*)::int AS total FROM careers c ${where}`, values);
     values.push(limit, offset);
     const result = await pool.query(
@@ -40,7 +40,7 @@ router.get('/:careerId', async (req, res, next) => {
     const result = await pool.query(
       `SELECT c.id, c.title, c.description, c.responsibilities, c.qualifications, c.entry_routes,
               c.verification_status, c.origin, c.source_url, c.source_document_url, c.source_last_checked_at, c.verified_at
-       FROM careers c WHERE c.id = $1 AND c.record_status = 'published'`, [req.params.careerId]
+       FROM careers c WHERE c.id = $1 AND c.record_status IN ('published', 'needs_review')`, [req.params.careerId]
     );
     
     let career;
@@ -126,7 +126,7 @@ router.get('/:careerId', async (req, res, next) => {
 
 router.get('/:careerId/skills', async (req, res, next) => {
   try {
-    const result = await pool.query(`SELECT s.id, s.name, s.description, cs.importance, cs.origin, cs.verification_status FROM career_skills cs JOIN skills s ON s.id = cs.skill_id WHERE cs.career_id = $1 AND s.record_status = 'published' ORDER BY CASE cs.importance WHEN 'required' THEN 1 WHEN 'important' THEN 2 ELSE 3 END, s.name`, [req.params.careerId]);
+    const result = await pool.query(`SELECT s.id, s.name, s.description, cs.importance, cs.origin, cs.verification_status FROM career_skills cs JOIN skills s ON s.id = cs.skill_id WHERE cs.career_id = $1 AND s.record_status IN ('published', 'needs_review') ORDER BY CASE cs.importance WHEN 'required' THEN 1 WHEN 'important' THEN 2 ELSE 3 END, s.name`, [req.params.careerId]);
     
     if (result.rows.length === 0) {
       const aiResult = await pool.query(`SELECT required_skills FROM ai_career_profiles WHERE id = $1`, [req.params.careerId]);
@@ -170,7 +170,7 @@ router.get('/:careerId/courses', async (req, res, next) => {
         (c1.subject IS NOT NULL AND c2.subject IS NOT NULL AND c1.subject ILIKE c2.subject)
       )
       JOIN institutions i ON i.id = c2.institution_id 
-      WHERE c2.record_status = 'published' AND (
+      WHERE c2.record_status IN ('published', 'needs_review') AND (
         EXISTS (SELECT 1 FROM course_careers cc WHERE cc.course_id = c1.id AND cc.career_id = $1)
         OR EXISTS (
           SELECT 1 FROM careers cr, jsonb_array_elements_text(cr.qualifications) q
@@ -189,21 +189,21 @@ router.get('/:careerId/courses', async (req, res, next) => {
 
 router.get('/:careerId/pathways', async (req, res, next) => {
   try {
-    const result = await pool.query(`SELECT p.id, p.title, p.description, p.record_status, p.verification_status, p.origin, p.source_url, p.verified_at FROM pathways p WHERE p.career_id = $1 AND p.record_status = 'published' ORDER BY p.title`, [req.params.careerId]);
+    const result = await pool.query(`SELECT p.id, p.title, p.description, p.record_status, p.verification_status, p.origin, p.source_url, p.verified_at FROM pathways p WHERE p.career_id = $1 AND p.record_status IN ('published', 'needs_review') ORDER BY p.title`, [req.params.careerId]);
     res.json({ data: result.rows });
   } catch (e) { next(e); }
 });
 
 router.get('/:careerId/opportunities', async (req, res, next) => {
   try {
-    const result = await pool.query(`SELECT o.id, o.title, o.organization, o.location, o.opportunity_type, o.status, o.application_deadline, o.verification_status, o.source_url, o.verified_at FROM career_opportunities co JOIN opportunities o ON o.id = co.opportunity_id WHERE co.career_id = $1 AND o.record_status = 'published' ORDER BY o.application_deadline NULLS LAST, o.title`, [req.params.careerId]);
+    const result = await pool.query(`SELECT o.id, o.title, o.organization, o.location, o.opportunity_type, o.status, o.application_deadline, o.verification_status, o.source_url, o.verified_at FROM career_opportunities co JOIN opportunities o ON o.id = co.opportunity_id WHERE co.career_id = $1 AND o.record_status IN ('published', 'needs_review') ORDER BY o.application_deadline NULLS LAST, o.title`, [req.params.careerId]);
     res.json({ data: result.rows });
   } catch (e) { next(e); }
 });
 
 router.get('/:careerId/related', async (req, res, next) => {
   try {
-    const result = await pool.query(`SELECT DISTINCT c2.id, c2.title, c2.description FROM career_skills cs1 JOIN career_skills cs2 ON cs1.skill_id = cs2.skill_id AND cs2.career_id <> cs1.career_id JOIN careers c2 ON c2.id = cs2.career_id WHERE cs1.career_id = $1 AND c2.record_status = 'published' ORDER BY c2.title LIMIT 20`, [req.params.careerId]);
+    const result = await pool.query(`SELECT DISTINCT c2.id, c2.title, c2.description FROM career_skills cs1 JOIN career_skills cs2 ON cs1.skill_id = cs2.skill_id AND cs2.career_id <> cs1.career_id JOIN careers c2 ON c2.id = cs2.career_id WHERE cs1.career_id = $1 AND c2.record_status IN ('published', 'needs_review') ORDER BY c2.title LIMIT 20`, [req.params.careerId]);
     res.json({ data: result.rows });
   } catch (e) { next(e); }
 });
@@ -223,7 +223,7 @@ router.post('/explore', authenticate, exploreRateLimit, async (req, res, next) =
     const dbHit = await pool.query(
       `SELECT c.id, c.title, c.description, c.responsibilities, c.qualifications, c.entry_routes,
               c.verification_status, c.origin, c.source_url, c.source_document_url, c.source_last_checked_at, c.verified_at
-       FROM careers c WHERE c.record_status = 'published' AND c.title ILIKE $1 LIMIT 1`,
+       FROM careers c WHERE c.record_status IN ('published', 'needs_review') AND c.title ILIKE $1 LIMIT 1`,
       [query]
     );
     if (dbHit.rows.length > 0) {
@@ -260,8 +260,8 @@ router.post('/explore', authenticate, exploreRateLimit, async (req, res, next) =
     }
 
     const genPromise = (async () => {
-      const knownCareersRes = await pool.query(`SELECT id, title FROM careers WHERE record_status = 'published' LIMIT 60`);
-      const knownSkillsRes = await pool.query(`SELECT name FROM skills WHERE record_status = 'published' LIMIT 200`);
+      const knownCareersRes = await pool.query(`SELECT id, title FROM careers WHERE record_status IN ('published', 'needs_review') LIMIT 60`);
+      const knownSkillsRes = await pool.query(`SELECT name FROM skills WHERE record_status IN ('published', 'needs_review') LIMIT 200`);
       const userSkillsRes = await pool.query(`SELECT s.name FROM user_skills us JOIN skills s ON s.id = us.skill_id WHERE us.user_id = $1`, [req.user.id]);
       
       const controller = new AbortController();
@@ -368,7 +368,7 @@ router.post('/explore', authenticate, exploreRateLimit, async (req, res, next) =
                 const normSkill = normalizeString(sk.name);
                 if (!normSkill) continue;
                 let skId;
-                const skRes = await client.query(`SELECT id FROM skills WHERE name ILIKE $1 AND record_status = 'published'`, [sk.name]);
+                const skRes = await client.query(`SELECT id FROM skills WHERE name ILIKE $1 AND record_status IN ('published', 'needs_review')`, [sk.name]);
                 if (skRes.rows.length > 0) {
                     skId = skRes.rows[0].id;
                 } else {

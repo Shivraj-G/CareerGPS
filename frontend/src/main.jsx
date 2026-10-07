@@ -2508,6 +2508,8 @@ function Careers() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("search") || "");
   const [careers, setCareers] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState(null);
 
@@ -2522,7 +2524,7 @@ function Careers() {
   
   const hasActiveSearch = (searchParams.get("search") || "").trim().length > 0;
 
-  function load(search) {
+  function load(search, loadPage = 1) {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -2531,16 +2533,28 @@ function Careers() {
     const signal = controller.signal;
 
     let active = true;
-    setStatus("loading");
+    if (loadPage === 1) {
+      setStatus("loading");
+      setCareers([]);
+      setTotal(0);
+    } else {
+      setStatus("loading_more");
+    }
     setError(null);
     setNotACareerReason(null);
+    
+    const params = { limit: 20, page: loadPage };
+    if (search) params.search = search;
+    
     api
-      .careers(search ? { search } : {}, { signal })
+      .careers(params, { signal })
       .then(async (data) => {
         if (!active || signal.aborted) return;
         const results = unwrapList(data).map(normalizeCareer);
+        const newTotal = data.pagination?.total ?? results.length;
+        setTotal(newTotal);
 
-        if (results.length === 0 && search && search.length <= 120 && getToken()) {
+        if (results.length === 0 && search && search.length <= 120 && getToken() && loadPage === 1) {
           setStatus("exploring");
           try {
             const exploreRes = await api.exploreCareer({ query: search }, { signal });
@@ -2550,6 +2564,7 @@ function Careers() {
               setStatus("not_a_career");
             } else if (exploreRes.data) {
               setCareers([normalizeCareer(exploreRes.data)]);
+              setTotal(1);
               setStatus("ready");
             } else {
               setCareers([]);
@@ -2565,7 +2580,7 @@ function Careers() {
             setStatus("error");
           }
         } else {
-          setCareers(results);
+          setCareers(prev => loadPage === 1 ? results : [...prev, ...results]);
           setStatus("ready");
         }
       })
@@ -2579,12 +2594,19 @@ function Careers() {
       controller.abort();
     };
   }
-  useEffect(() => load(searchParams.get("search") || ""), []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => load(searchParams.get("search") || "", 1), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function runSearch(next) {
     setQuery(next);
+    setPage(1);
     setSearchParams(next.trim() ? { search: next } : {});
-    load(next);
+    load(next, 1);
+  }
+
+  function loadMore() {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    load(query, nextPage);
   }
 
   // Real integration for POST /recommendations/careers (auth required).
@@ -2770,10 +2792,10 @@ function Careers() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 22 }}>
           <div className="results">
-            {status === "ready" && (
+            {(status === "ready" || status === "loading_more") && careers.length > 0 && (
               <div className="results-top">
                 <span>
-                  Showing <b>{careers.length}</b> careers
+                  Showing <b>{careers.length}</b> of <b>{total}</b> careers
                 </span>
               </div>
             )}
@@ -2795,20 +2817,28 @@ function Careers() {
               <ErrorState
                 text={error?.message}
                 status={error?.status}
-                onRetry={() => load(query)}
+                onRetry={() => load(query, page)}
               />
             )}
-            {status === "ready" &&
-              (careers.length ? (
-                careers.map((c) => <CareerRow c={c} key={c.id} />)
-              ) : (
+            {(status === "ready" || status === "loading_more") && careers.length > 0 && careers.map((c) => <CareerRow c={c} key={c.id} />)}
+            {(status === "ready" || status === "loading_more") && careers.length === 0 && (
                 <EmptyState
                   title="No careers matched that search"
                   text={!getToken() ? "Log in to get AI-powered career exploration." : "Try a career title or a skill such as SQL or Python."}
                   action="Clear search"
                   onAction={() => runSearch("")}
                 />
-              ))}
+            )}
+            {(status === "ready" || status === "loading_more") && careers.length > 0 && careers.length < total && (
+              <button 
+                className="btn outline" 
+                style={{ width: '100%', marginTop: 24 }} 
+                disabled={status === "loading_more"} 
+                onClick={loadMore}
+              >
+                {status === "loading_more" ? "Loading more..." : "Load more careers"}
+              </button>
+            )}
           </div>
         </div>
       </div>
