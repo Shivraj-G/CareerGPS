@@ -3250,10 +3250,20 @@ function CareerDetail() {
                   ))}
                 </div>
               ) : (
-                <EmptyState
-                  title="No pathway template yet"
-                  text="A step-by-step pathway hasn't been published for this career yet."
-                />
+                <div className="listing-page" style={{ padding: 0 }}>
+                  <div className="panel detail-panel" style={{ textAlign: 'center', padding: '40px 20px' }}>
+                    <h2 style={{ marginBottom: '12px' }}>Build your personalized career pathway</h2>
+                    <p className="muted" style={{ marginBottom: '24px', maxWidth: '600px', margin: '0 auto 24px auto' }}>
+                      AI will analyze your education, skills and this career to create two realistic routes.
+                    </p>
+                    <Link
+                      className="btn primary large"
+                      to={`/pathway?career=${c.id}&title=${encodeURIComponent(c.title)}&type=${c.isAiProfile ? 'ai_profile' : 'catalogue'}&origin=${c.origin}&vstatus=${c.verificationStatus}`}
+                    >
+                      Generate 2 AI Pathways <ArrowRight size={15} />
+                    </Link>
+                  </div>
+                </div>
               ))}
             {tab === "courses" &&
               tabStatus === "ready" &&
