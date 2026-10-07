@@ -2317,7 +2317,12 @@ function Dashboard() {
             api.pathwayProgress(latest.id).then(pRes => {
               if (!active) return;
               const p = unwrapObject(pRes);
-              setPathwaySummary({ title: "Your active pathway", status: p.status, steps: p.steps || [] });
+              setPathwaySummary({ 
+                title: latest.title, 
+                careerTitle: latest.career_title, 
+                status: p.status, 
+                steps: p.steps || [] 
+              });
             }).catch(() => { });
           }
         }).catch(() => { });
@@ -2413,7 +2418,24 @@ function Dashboard() {
             <div className="panel-head">
               <div>
                 <span className="label">YOUR PATHWAY</span>
-                <h2>{pathwaySummary?.title ?? "No pathway yet"}</h2>
+                <h2>{pathwaySummary?.careerTitle ?? "No pathway yet"}</h2>
+                {pathwaySummary?.title && <p style={{margin: '4px 0 16px 0', fontSize: '14px', color: 'var(--muted)'}}>{pathwaySummary.title}</p>}
+                {pathwaySummary?.steps && pathwaySummary.steps.length > 0 && (() => {
+                  const completed = pathwaySummary.steps.filter(s => s.status === 'completed').length;
+                  const total = pathwaySummary.steps.length;
+                  const pct = total ? Math.round((completed / total) * 100) : 0;
+                  return (
+                    <div style={{marginBottom: 16}}>
+                      <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: 4}}>
+                        <span>{completed} of {total} steps completed</span>
+                        <span>{pct}%</span>
+                      </div>
+                      <div style={{height: 6, background: 'var(--line)', borderRadius: 3, overflow: 'hidden'}}>
+                        <div style={{height: '100%', background: 'var(--brand)', width: `${pct}%`, transition: 'width 0.3s ease'}}></div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
               <Link to="/pathway">View all</Link>
             </div>

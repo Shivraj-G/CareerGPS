@@ -91,11 +91,23 @@ export async function generatePathway(userId, input) {
        error.statusCode = 400; error.code = 'VALIDATION_ERROR'; throw error;
     }
 
-    const careerRes = await client.query('SELECT id, title, description, qualifications, entry_routes, responsibilities FROM careers WHERE id = $1', [input.career_id]);
-    const careerRow = careerRes.rows[0];
+    let careerRes = await client.query('SELECT id, title, description, qualifications, entry_routes, responsibilities FROM careers WHERE id = $1', [input.career_id]);
+    let careerRow = careerRes.rows[0];
+    if (!careerRow) {
+      const aiRes = await client.query('SELECT id, title, description, responsibilities, qualifications, entry_routes FROM ai_career_profiles WHERE id = $1', [input.career_id]);
+      careerRow = aiRes.rows[0];
+    }
     if (!careerRow) {
       const error = new Error('Career not found.');
       error.statusCode = 404; error.code = 'CAREER_NOT_FOUND'; throw error;
+    }
+
+    const enrichRes = await client.query('SELECT description, responsibilities, qualifications FROM career_enrichments WHERE career_id = $1', [input.career_id]);
+    if (enrichRes.rows.length > 0) {
+      const enrich = enrichRes.rows[0];
+      careerRow.description = enrich.description || careerRow.description;
+      if (enrich.responsibilities && enrich.responsibilities.length > 0) careerRow.responsibilities = enrich.responsibilities;
+      if (enrich.qualifications && enrich.qualifications.length > 0) careerRow.qualifications = enrich.qualifications;
     }
 
     const profileRes = await client.query(
@@ -149,7 +161,13 @@ export async function generatePathway(userId, input) {
     }
 
     const aiRes = await callAi('/internal/v1/pathways/generate_two', {
-      career_context: careerRow,
+      career_context: {
+        title: careerRow.title,
+        description: careerRow.description || 'A professional career path.',
+        responsibilities: careerRow.responsibilities || [],
+        qualifications: careerRow.qualifications || [],
+        entry_routes: careerRow.entry_routes || []
+      },
       user_context: profile,
       skill_gap: { matched, missing_required: missingRequired, missing_useful: missingUseful }
     }, 45000);
@@ -166,7 +184,7 @@ export async function generatePathway(userId, input) {
       error.statusCode = 503; error.code = 'AI_GENERATION_UNAVAILABLE'; throw error;
     }
 
-    if (aiRes.status !== 'ai_generated' || !aiRes.pathways || aiRes.pathways.length !== 2) {
+    if (aiRes.status !== 'ai_generated' || !aiRes.pathways || !Array.isArray(aiRes.pathways) || aiRes.pathways.length < 2) {
       logger.error('Pathway generation failed: AI response validation failed or malformed response', { aiResStatus: aiRes.status, hasPathways: !!aiRes.pathways, pathwaysCount: aiRes.pathways?.length });
       const error = new Error('Failed to generate pathways due to malformed AI response.');
       error.statusCode = 500; error.code = 'AI_GENERATION_FAILED'; throw error;
@@ -184,7 +202,7 @@ export async function generatePathway(userId, input) {
         `INSERT INTO pathways (career_id, title, description, pathway_type, record_status, verification_status, origin)
          VALUES ($1, $2, $3, 'generated', 'published', 'unverified', 'ai_generated')
          RETURNING id, career_id, title, description, verification_status, origin`,
-        [input.career_id, pw.title, pw.summary]
+        [input.career_id, pw.title, pw.description || pw.summary || '']
       );
       const template = pRes.rows[0];
       template.steps = [];
@@ -194,7 +212,7 @@ export async function generatePathway(userId, input) {
           `INSERT INTO pathway_steps (pathway_id, step_order, title, description, step_type, verification_status, origin)
            VALUES ($1, $2, $3, $4, $5, 'unverified', 'ai_generated')
            RETURNING id, step_order, title, description, step_type, metadata`,
-          [template.id, step.order, step.title, step.description, step.step_type]
+          [template.id, step.order, step.title, step.description || '', step.step_type || 'custom']
         );
         template.steps.push(sRes.rows[0]);
       }
@@ -231,7 +249,7 @@ export async function selectPathway(userId, userPathwayId) {
     const row = res.rows[0];
     if (row.status !== 'generated') {
        await client.query('COMMIT');
-       return row;
+       return await getUserPathway(userId, userPathwayId);
     }
     
     // Find the other generated pathway from the same batch
@@ -239,7 +257,7 @@ export async function selectPathway(userId, userPathwayId) {
        await client.query(`UPDATE user_pathways SET status = 'archived' WHERE user_id = $1 AND status = 'generated' AND generated_context->>'generated_at' = $2 AND id != $3`, [userId, row.generated_context.generated_at, userPathwayId]);
     }
 
-    const updated = await client.query(`UPDATE user_pathways SET status = 'active' WHERE id = $1 RETURNING *`, [userPathwayId]);
+    const updated = await client.query(`UPDATE user_pathways SET status = 'active', updated_at = NOW() WHERE id = $1 RETURNING *`, [userPathwayId]);
     await client.query('COMMIT');
     return await getUserPathway(userId, userPathwayId);
   } catch (err) {
