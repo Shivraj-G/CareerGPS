@@ -61,6 +61,38 @@ def test_recommendations_full_skill_overlap_ranks_first():
     assert body["grounded"] is True
 
 
+def test_recommendations_goal_match_dominates_over_generic_skills():
+    payload = {
+        "profile": {"career_goal": "Data Analyst"},
+        "skills": [
+            {"id": "s1", "name": "Python"},
+            {"id": "s2", "name": "SQL"},
+            {"id": "s3", "name": "Git"},
+        ],
+        "careers": [
+            _career("c_backend", "Backend Developer", [
+                {"skill_id": "s1", "name": "Python", "importance": "required"},
+                {"skill_id": "s2", "name": "SQL", "importance": "required"},
+                {"skill_id": "s3", "name": "Git", "importance": "required"},
+                {"skill_id": "s4", "name": "Docker", "importance": "required"},
+            ]),
+            _career("c_data", "Data Analyst", [
+                {"skill_id": "s1", "name": "Python", "importance": "required"},
+                {"skill_id": "s2", "name": "SQL", "importance": "required"},
+                {"skill_id": "s5", "name": "Excel", "importance": "required"},
+                {"skill_id": "s6", "name": "Power BI", "importance": "required"},
+            ]),
+        ],
+        "goal": "Data Analyst",
+    }
+    resp = client.post("/internal/v1/recommendations/careers", json=payload, headers=HEADERS)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["recommendations"][0]["career_id"] == "c_data"
+    assert body["recommendations"][0]["title"] == "Data Analyst"
+    assert body["recommendations"][0]["score"] > body["recommendations"][1]["score"]
+
+
 def test_recommendations_partial_overlap_scores_lower_than_full_match():
     full_match_payload = {
         "profile": {},

@@ -1,0 +1,53 @@
+{
+  "purpose": "Copy a template, replace placeholders with a real public board/company, then register and approve it in CareerGPS Admin. These are examples only and will not run as written.",
+  "templates": [
+    {
+      "name": "REPLACE - Private employer careers (Greenhouse)",
+      "source_type": "private_careers",
+      "base_url": "https://boards.greenhouse.io/YOUR_BOARD_TOKEN",
+      "organization": "REPLACE WITH EMPLOYER NAME",
+      "is_approved": false,
+      "access_notes": "{\"worker\":{\"max_pages\":10,\"max_candidates\":100,\"max_depth\":1,\"delay_ms\":1000}}"
+    },
+    {
+      "name": "REPLACE - Private employer jobs (Lever)",
+      "source_type": "private_careers",
+      "base_url": "https://jobs.lever.co/YOUR_COMPANY_SITE",
+      "organization": "REPLACE WITH EMPLOYER NAME",
+      "is_approved": false,
+      "access_notes": "{\"worker\":{\"max_pages\":10,\"max_candidates\":100,\"max_depth\":1,\"delay_ms\":1000}}"
+    },
+    {
+      "name": "REPLACE - Private employer careers (Ashby)",
+      "source_type": "private_careers",
+      "base_url": "https://jobs.ashbyhq.com/YOUR_JOB_BOARD_NAME",
+      "organization": "REPLACE WITH EMPLOYER NAME",
+      "is_approved": false,
+      "access_notes": "{\"worker\":{\"max_pages\":10,\"max_candidates\":100,\"max_depth\":1,\"delay_ms\":1000}}"
+    },
+    {
+      "name": "REPLACE - Employer internship board (Lever)",
+      "source_type": "internship_board",
+      "base_url": "https://jobs.lever.co/YOUR_INTERNSHIP_BOARD_SITE",
+      "organization": "REPLACE WITH EMPLOYER NAME",
+      "is_approved": false,
+      "access_notes": "{\"worker\":{\"max_pages\":10,\"max_candidates\":100,\"max_depth\":1,\"delay_ms\":1000}}"
+    },
+    {
+      "name": "REPLACE - Employer internship board (Greenhouse)",
+      "source_type": "internship_board",
+      "base_url": "https://boards.greenhouse.io/YOUR_INTERNSHIP_BOARD_TOKEN",
+      "organization": "REPLACE WITH EMPLOYER NAME",
+      "is_approved": false,
+      "access_notes": "{\"worker\":{\"max_pages\":10,\"max_candidates\":100,\"max_depth\":1,\"delay_ms\":1000}}"
+    },
+    {
+      "name": "REPLACE - Public employer HTML careers page",
+      "source_type": "private_careers",
+      "base_url": "https://careers.example.org/jobs",
+      "organization": "REPLACE WITH EMPLOYER NAME OR LEAVE EMPTY FOR MULTI-EMPLOYER BOARDS",
+      "is_approved": false,
+      "access_notes": "{\"worker\":{\"max_pages\":30,\"max_candidates\":50,\"max_depth\":2,\"delay_ms\":1500,\"default_location\":\"Goa\"}}"
+    }
+  ]
+}

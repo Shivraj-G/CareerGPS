@@ -28,7 +28,7 @@ def groq_ok(text):
 @pytest.fixture
 def keys(monkeypatch):
     def setup(**values):
-        for name in ("LLM_PROVIDER", "LLM_FALLBACK_PROVIDER", "GEMINI_API_KEY", "GOOGLE_API_KEY", "GROQ_API_KEY"):
+        for name in ("LLM_PROVIDER", "LLM_FALLBACK_PROVIDER", "GEMINI_API_KEY", "GOOGLE_API_KEY", "GROQ_API_KEY", "GEMINI_MODEL"):
             monkeypatch.delenv(name, raising=False)
         for name, value in values.items():
             monkeypatch.setenv(name, value)
@@ -63,7 +63,8 @@ def test_auto_detects_provider_from_available_keys(keys):
 # ---- Gemini adapter --------------------------------------------------------
 
 def test_gemini_success_parses_text_and_sends_key_in_header_not_url(keys, monkeypatch):
-    keys(LLM_PROVIDER="gemini", GEMINI_API_KEY="SECRET-G")
+    # This assertion is specifically for Gemini 2.5 Flash's configurable thinking budget.
+    keys(LLM_PROVIDER="gemini", GEMINI_API_KEY="SECRET-G", GEMINI_MODEL="gemini-2.5-flash")
     seen = {}
 
     def fake_post(url, headers=None, json=None, timeout=None):

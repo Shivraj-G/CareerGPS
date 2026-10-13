@@ -126,3 +126,20 @@ test("an authenticated request attaches the stored bearer token", async () => {
   await api.me();
   assert.equal(capturedHeaders.Authorization, "Bearer my-token");
 });
+
+test("intentional aborts are classified as CANCELLED, not as network or timeout failures", async () => {
+  const abortController = new AbortController();
+  globalThis.fetch = async (_url, options) => new Promise((_resolve, reject) => {
+    const abort = () => reject(new DOMException("The operation was aborted.", "AbortError"));
+    if (options.signal.aborted) abort();
+    else options.signal.addEventListener("abort", abort, { once: true });
+  });
+
+  const request = api.validateGoal({ goal: "Doctor" }, { signal: abortController.signal });
+  abortController.abort();
+  await assert.rejects(request, (err) => {
+    assert.ok(err instanceof ApiError);
+    assert.equal(err.code, "CANCELLED");
+    return true;
+  });
+});

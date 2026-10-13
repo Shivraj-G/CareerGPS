@@ -101,3 +101,30 @@ Do not use these demo credentials in production.
 The official Goa institution/course records are based on the DTE technical diploma catalogue. Recruitment listing metadata is based on the Government of Goa recruitment page. Detailed post-specific eligibility is deliberately not invented.
 
 This is a development/demo seed. Review workflow should be used before treating source-sensitive data as production-verified.
+
+
+## Hackathon catalogue expansion (006)
+
+`006_hackathon_catalogue_expansion.sql` adds a broad, rerunnable catalogue of cross-domain skills, career profiles, role-skill relationships, staged learning pathways, and three project templates per expanded career. It covers technical and non-technical fields including software, data, AI, cybersecurity, cloud, business, finance, law, education, healthcare, psychology, geography, agriculture, design, media, hospitality, engineering, architecture, HR, sales, and public service.
+
+The added career descriptions and project/pathway templates are platform-authored learning content, not claims about a specific employer or official eligibility. The new career records are marked `needs_review` for verification while being available in the published catalogue; validate them before treating them as authoritative guidance. This seed deliberately does not fabricate live vacancies, closing dates, salaries, institution admissions, or legal/licensing requirements.
+
+Run `npm run migrate` and then `npm run seed` from `backend/`. The seed is idempotent for skills, careers, role-skill links, pathways, steps, and project templates. Existing user progress and unrelated application code are not changed.
+
+
+## Hackathon catalogue expansion (006)
+
+`006_hackathon_catalogue_expansion.sql` adds a broad, rerunnable catalogue of cross-domain skills, career profiles, role-skill relationships, staged learning pathways, and three project templates per expanded career. It covers technical and non-technical fields including software, data, AI, cybersecurity, cloud, business, finance, law, education, healthcare, psychology, geography, agriculture, design, media, hospitality, engineering, architecture, HR, sales, and public service.
+
+The added career descriptions and project/pathway templates are platform-authored learning content, not claims about a specific employer or official eligibility. The new career records are marked `needs_review` for verification while being available in the published catalogue; validate them before treating them as authoritative guidance. This seed deliberately does not fabricate live vacancies, closing dates, salaries, institution admissions, or legal/licensing requirements.
+
+Run `npm run migrate` and then `npm run seed` from `backend/`. The seed is idempotent for skills, careers, role-skill links, pathways, steps, and project templates. Existing user progress and unrelated application code are not changed.
+
+
+## Hackathon catalogue expansion (006)
+
+`006_hackathon_catalogue_expansion.sql` adds a broad, rerunnable catalogue of cross-domain skills, career profiles, role-skill relationships, staged learning pathways, and three project templates per expanded career. It covers technical and non-technical fields including software, data, AI, cybersecurity, cloud, business, finance, law, education, healthcare, psychology, geography, agriculture, design, media, hospitality, engineering, architecture, HR, sales, and public service.
+
+The added career descriptions and project/pathway templates are platform-authored learning content, not claims about a specific employer or official eligibility. The new career records are marked `needs_review` for verification while being available in the published catalogue; validate them before treating them as authoritative guidance. This seed deliberately does not fabricate live vacancies, closing dates, salaries, institution admissions, or legal/licensing requirements.
+
+Run `npm run migrate` and then `npm run seed` from `backend/`. The seed is idempotent for skills, careers, role-skill links, pathways, steps, and project templates. Existing user progress and unrelated application code are not changed.

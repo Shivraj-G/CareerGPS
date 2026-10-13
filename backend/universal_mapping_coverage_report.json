@@ -1,0 +1,385 @@
+{
+  "totalDiscovered": 42,
+  "mappedCount": 38,
+  "unmappedCount": 4,
+  "qualifications": [
+    {
+      "source": "courses",
+      "degree": "Diploma",
+      "specialization": "Electrical and Electronics Engineering",
+      "isMapped": true,
+      "mappedSkillCount": 10,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "courses",
+      "degree": "Diploma",
+      "specialization": "Office Practice",
+      "isMapped": true,
+      "mappedSkillCount": 8,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "courses",
+      "degree": "Diploma",
+      "specialization": "Architectural Assistantship",
+      "isMapped": true,
+      "mappedSkillCount": 10,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "courses",
+      "degree": "Diploma",
+      "specialization": "Fabrication Technology",
+      "isMapped": true,
+      "mappedSkillCount": 10,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "courses",
+      "degree": "Diploma",
+      "specialization": "Automobile Engineering",
+      "isMapped": true,
+      "mappedSkillCount": 10,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "courses",
+      "degree": "Diploma",
+      "specialization": "Electronics Engineering",
+      "isMapped": true,
+      "mappedSkillCount": 9,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "courses",
+      "degree": "Diploma",
+      "specialization": "Electrical Engineering",
+      "isMapped": true,
+      "mappedSkillCount": 10,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "courses",
+      "degree": "Diploma",
+      "specialization": "Shipbuilding Engineering",
+      "isMapped": true,
+      "mappedSkillCount": 7,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "courses",
+      "degree": "Diploma",
+      "specialization": "Hotel Management",
+      "isMapped": true,
+      "mappedSkillCount": 5,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "courses",
+      "degree": "Diploma",
+      "specialization": "Mechanical Engineering",
+      "isMapped": true,
+      "mappedSkillCount": 3,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "courses",
+      "degree": "Diploma",
+      "specialization": "Electronics and Communication Engineering",
+      "isMapped": true,
+      "mappedSkillCount": 7,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "courses",
+      "degree": "Diploma",
+      "specialization": "Garment Technology",
+      "isMapped": true,
+      "mappedSkillCount": 1,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "courses",
+      "degree": "Diploma",
+      "specialization": "Food Technology",
+      "isMapped": true,
+      "mappedSkillCount": 10,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "courses",
+      "degree": "Diploma",
+      "specialization": "Electronics and Instrumentation Engineering",
+      "isMapped": true,
+      "mappedSkillCount": 6,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "courses",
+      "degree": "Diploma",
+      "specialization": "Pharmacy",
+      "isMapped": false,
+      "mappedSkillCount": 0,
+      "coreSkillCount": 0,
+      "status": "no_valid_skills_returned"
+    },
+    {
+      "source": "courses",
+      "degree": "Diploma",
+      "specialization": "Computer Engineering",
+      "isMapped": true,
+      "mappedSkillCount": 3,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "courses",
+      "degree": "UG",
+      "specialization": "",
+      "isMapped": false,
+      "mappedSkillCount": 0,
+      "coreSkillCount": 0,
+      "status": "no_valid_skills_returned"
+    },
+    {
+      "source": "courses",
+      "degree": "Diploma",
+      "specialization": "Medical Electronics",
+      "isMapped": false,
+      "mappedSkillCount": 0,
+      "coreSkillCount": 0,
+      "status": "no_valid_skills_returned"
+    },
+    {
+      "source": "courses",
+      "degree": "Diploma",
+      "specialization": "Civil Engineering",
+      "isMapped": true,
+      "mappedSkillCount": 2,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "Linux, cloud and deployment fundamentals",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 7,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "HTML, CSS and JavaScript fundamentals",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 7,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "Excel/SQL reporting skills",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 8,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "Statistics and machine-learning foundations",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 7,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "Finance/business process understanding",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 4,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "SQL and spreadsheet skills",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 9,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "Programming fundamentals",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 1,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "Networking and security fundamentals",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 6,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "Business process and ERP concepts",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 9,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "API and database project portfolio",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 8,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "Dashboard or case-study portfolio",
+      "specialization": "",
+      "isMapped": false,
+      "mappedSkillCount": 0,
+      "coreSkillCount": 0,
+      "status": "no_valid_skills_returned"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "Requirements and process documentation ability",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 7,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "Data and reporting skills",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 10,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "Requirements analysis and communication",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 10,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "Python and machine-learning fundamentals",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 8,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "SQL and spreadsheet analysis",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 9,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "Accounting and data analysis fundamentals",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 10,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "Database fundamentals",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 1,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "Programming and data structures fundamentals",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 10,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "Programming and machine learning fundamentals",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 7,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "SQL, programming and data pipeline fundamentals",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 10,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "Portfolio of analysis projects",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 10,
+      "coreSkillCount": 0,
+      "status": "success"
+    },
+    {
+      "source": "career_qualifications",
+      "degree": "Frontend and backend project experience",
+      "specialization": "",
+      "isMapped": true,
+      "mappedSkillCount": 0,
+      "coreSkillCount": 0,
+      "status": "already_mapped"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "name": "goa-career-intelligence-ingestion-worker",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -11,7 +11,10 @@
   },
   "scripts": {
     "ingest": "node src/worker.js",
-    "test" : "vitest run"
+    "ingest:dry-run": "node src/worker.js --dry-run",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:native": "node --test tests/native-smoke.mjs"
   },
   "devDependencies": {
     "vitest": "^5.0.2"

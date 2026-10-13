@@ -13,7 +13,19 @@ export function createApp() {
 
   app.disable('x-powered-by');
   app.use(helmet());
-  app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
+  // Parse configured origins, strip trailing slashes, and support comma-separated values
+  const configuredOrigins = env.CORS_ORIGIN.split(',').map(o => o.trim().replace(/\/$/, ''));
+  const allowedOrigins = new Set(configuredOrigins);
+  
+  if (env.NODE_ENV !== 'production') {
+    allowedOrigins.add('http://localhost:5173');
+    allowedOrigins.add('http://localhost:5174');
+  }
+
+  app.use(cors({ 
+    origin: Array.from(allowedOrigins), 
+    credentials: true 
+  }));
   app.use(express.json({ limit: '1mb' }));
   app.use(requestLogger);
 

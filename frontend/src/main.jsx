@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import ReactDOM from "react-dom/client";
 import {
   BrowserRouter,
@@ -61,9 +61,20 @@ import {
   AlertCircle,
   HelpCircle,
   CheckCircle,
+  RotateCcw,
 } from "lucide-react";
 import { api, getToken, setToken, clearToken } from "./api/client.js";
 import "./styles.css";
+import ProfilePage from "./pages/ProfilePage.jsx";
+import CareerDetailPage from "./pages/CareerDetailPage.jsx";
+import SkillGapPage from "./pages/SkillGapPage.jsx";
+import CareerPathwayView from "./components/pathway/CareerPathwayView.jsx";
+import { ProjectsStudioPage } from "./pages/ProjectsStudioPage.jsx";
+import { PublicPortfolioPage } from "./pages/PublicPortfolioPage.jsx";
+import SkillsInterestsPanel from "./components/profile/SkillsInterestsPanel.jsx";
+import OnboardingGoalFeasibilityCard from "./components/onboarding/OnboardingGoalFeasibilityCard.jsx";
+import { NotificationBell } from "./components/notifications/NotificationBell.jsx";
+import { getDisplayName, getAvatarInitials, getFirstName } from "./utils/userDisplay.js";
 
 /* ---------------------------------------------------------------------
  * NOTE ON THIS FILE
@@ -167,8 +178,10 @@ const STUDY_MODE_MAP = {
 
 function normalizeCareer(c) {
   if (!c) return c;
+  const careerId = c.ai_career_id ?? c.career_id ?? c.id ?? "";
   return {
-    id: c.ai_career_id ?? c.id ?? "",
+    id: careerId,
+    career_id: careerId,
     isAiProfile: !!c.ai_career_id,
     title: c.title ?? "Untitled career",
     description: c.description ?? "",
@@ -185,17 +198,58 @@ function normalizeCareer(c) {
   };
 }
 
+function formatOpportunityStatus(status, deadline) {
+  const normalized = String(status || "").trim().toLowerCase();
+  const deadlineTime = deadline ? new Date(deadline).getTime() : null;
+  const now = Date.now();
+  const isPast = deadlineTime && deadlineTime < now;
+  const isClosingSoon = deadlineTime && !isPast && (deadlineTime - now <= 30 * 24 * 60 * 60 * 1000);
+
+  if (normalized === "closed" || isPast) return { label: "Closed", class: "closed", key: "closed" };
+  if (normalized === "upcoming") return { label: "Upcoming", class: "upcoming", key: "upcoming" };
+  if (normalized === "cancelled") return { label: "Cancelled", class: "cancelled", key: "cancelled" };
+  if (isClosingSoon) return { label: "Closing soon", class: "warning", key: "closing_soon" };
+  if (normalized === "open") return { label: "Open", class: "open", key: "open" };
+  if (deadline) return { label: "Active notice", class: "open", key: "open" };
+  return { label: "Open", class: "open", key: "open" };
+}
+
+function formatOpportunityType(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  const labels = {
+    government_recruitment: "Government",
+    government: "Government",
+    private_job: "Private Sector",
+    private: "Private Sector",
+    private_sector: "Private Sector",
+    private_careers: "Private Sector",
+    internship: "Internship",
+    apprenticeship: "Apprenticeship",
+    graduate_programme: "Programme",
+    programme: "Programme",
+    scholarship: "Scholarship",
+    official_government: "Official Government",
+  };
+  if (labels[normalized]) return labels[normalized];
+  return normalized.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function normalizeOpportunity(o) {
+  const statusInfo = formatOpportunityStatus(o.status, o.application_deadline);
   return {
     id: o.id ?? "",
     title: o.title ?? "Untitled opportunity",
-    status: o.status ?? "unknown",
-    type: o.opportunity_type ?? "",
-    org: o.organization ?? "",
-    location: o.location ?? "",
+    status: statusInfo.label,
+    statusClass: statusInfo.class,
+    statusKey: statusInfo.key,
+    rawStatus: o.status ?? "open",
+    type: formatOpportunityType(o.opportunity_type),
+    rawType: o.opportunity_type ?? "",
+    org: o.organization || o.org || "Organization not specified",
+    location: o.location || "Location not specified",
     deadline: o.application_deadline
-      ? new Date(o.application_deadline).toLocaleDateString()
-      : "Not specified",
+      ? new Date(o.application_deadline).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+      : "Deadline not specified",
     deadlineDate: o.application_deadline
       ? new Date(o.application_deadline)
       : null,
@@ -203,7 +257,12 @@ function normalizeOpportunity(o) {
     description: o.description ?? "",
     advertisementNumber: o.advertisement_number ?? null,
     sourceUrl: o.source_url ?? null,
-    verificationStatus: o.verification_status ?? "needs_review",
+    sourceDocumentUrl: o.source_document_url ?? null,
+    sourceName: o.source_name ?? null,
+    sourceType: o.source_type ? formatOpportunityType(o.source_type) : null,
+    verificationStatus: o.verification_status ?? "verified",
+    verifiedAt: o.verified_at ? new Date(o.verified_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : null,
+    lastCheckedAt: o.source_last_checked_at ? new Date(o.source_last_checked_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : null,
     requirements: Array.isArray(o.requirements) ? o.requirements : [],
     relatedCareers: Array.isArray(o.related_careers) ? o.related_careers : [],
   };
@@ -420,7 +479,7 @@ function ErrorState({
         <Sparkles size={24} />
         <h2>AI service is temporarily unavailable</h2>
         <p>
-          {text} Everything else in CareerGPS (career search, pathways,
+          {text} Everything else in NaviGoa (career search, pathways,
           opportunities) keeps working normally without it.
         </p>
         {onRetry && (
@@ -544,7 +603,7 @@ function AssistantWidget() {
         message: text,
       });
       const data = unwrapObject(res);
-      console.debug("[CareerGPS Assistant]", {
+      console.debug("[NaviGoa Assistant]", {
         conversationId: data.conversation_id,
         requestStatus: "success",
       });
@@ -552,12 +611,12 @@ function AssistantWidget() {
       setMessages((m) => [...m, data.message]);
       loadConversations();
     } catch (err) {
-      console.debug("[CareerGPS Assistant]", {
+      console.debug("[NaviGoa Assistant]", {
         conversationId,
         requestStatus: "error",
         responseStatus: err.status || "network",
       });
-      let msg = "Unable to connect to the CareerGPS backend.";
+      let msg = "Unable to connect to the NaviGoa backend.";
       if (err.status === 401)
         msg = "Your session has expired. Please log in again.";
       else if (err.status === 403)
@@ -566,7 +625,7 @@ function AssistantWidget() {
       else if (err.status === 429)
         msg = "Too many requests. Please try again shortly.";
       else if (err.status >= 500)
-        msg = "CareerGPS couldn't process that request. Please try again.";
+        msg = "NaviGoa couldn't process that request. Please try again.";
       else if (err.message) msg = err.message;
       setError(new Error(msg));
     } finally {
@@ -599,7 +658,7 @@ function AssistantWidget() {
           <div className="assistant-head">
             <div className="assistant-head-title">
               <Bot size={18} />
-              <b>CareerGPS Assistant</b>
+              <b>NaviGoa Assistant</b>
             </div>
             <div className="assistant-head-actions">
               {loggedIn && (
@@ -680,7 +739,7 @@ function AssistantWidget() {
                     <Sparkles size={20} />
                     <p>
                       Ask about careers, pathways, courses or opportunities in
-                      Goa. Answers are grounded in CareerGPS's own data - if
+                      Goa. Answers are grounded in NaviGoa's own data - if
                       something isn't known, the assistant will say so instead
                       of guessing.
                     </p>
@@ -848,6 +907,7 @@ function AppShell({ children }) {
     ["/dashboard", "Home", LayoutDashboard],
     ["/careers", "Explore Careers", Compass],
     ["/pathway", "My Plan", RouteIcon],
+    ["/projects", "Projects & Studio", Sparkles],
     ["/saved", "Saved Careers", Bookmark],
     ["/opportunities", "Opportunities", BriefcaseBusiness],
     ["/profile", "Profile", UserCog],
@@ -855,8 +915,9 @@ function AppShell({ children }) {
   const publicPage = ["/", "/signup", "/login", "/onboarding"].includes(
     location.pathname,
   );
+  const isPublicPortfolio = location.pathname.startsWith("/portfolio/p/");
 
-  if (publicPage) return <>{children}</>;
+  if (publicPage || isPublicPortfolio) return <>{children}</>;
 
   if (loading)
     return (
@@ -876,6 +937,13 @@ function AppShell({ children }) {
 
   return (
     <div className="app-shell">
+      {mobile && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setMobile(false)}
+          aria-hidden="true"
+        />
+      )}
       <aside className={`sidebar ${mobile ? "open" : ""}`}>
         <Logo />
         <div className="side-section-label">YOUR JOURNEY</div>
@@ -906,13 +974,11 @@ function AppShell({ children }) {
             }}
           >
             <div className="avatar">
-              {(getLocalName(user?.id) || user?.email || "?")
-                .charAt(0)
-                .toUpperCase()}
+              {getAvatarInitials(user)}
             </div>
             <div>
               <strong>
-                {getLocalName(user?.id) || user?.email || "Guest"}
+                {getDisplayName(user)}
               </strong>
               <span>{user?.role || "Log out"}</span>
             </div>
@@ -923,9 +989,18 @@ function AppShell({ children }) {
 
       <div className="main-area">
         <header className="topbar">
-          <button className="mobile-menu" onClick={() => setMobile((v) => !v)}>
+          <button className="mobile-menu" aria-label={mobile ? "Close navigation menu" : "Open navigation menu"} aria-expanded={mobile} onClick={() => setMobile((v) => !v)}>
             {mobile ? <X /> : <Menu />}
           </button>
+          <div className="mobile-brand">
+            <Link to="/dashboard" className="mobile-brand-link" aria-label="NaviGoa Dashboard">
+              <img
+                src="/navigoa-logo.jpg"
+                alt="NaviGoa"
+                className="mobile-brand-logo"
+              />
+            </Link>
+          </div>
           <div className="top-links">
             <Link to="/careers">Careers</Link>
             <Link to="/learn">Learn</Link>
@@ -933,18 +1008,14 @@ function AppShell({ children }) {
             <Link to="/opportunities">Opportunities</Link>
           </div>
           <div className="top-actions">
-            <button className="icon-btn">
-              <Bell size={18} />
-            </button>
+            <NotificationBell />
             <Link 
               to="/profile" 
               className="avatar small" 
               aria-label="Open profile"
               style={{ textDecoration: 'none', cursor: 'pointer' }}
             >
-              {(getLocalName(user?.id) || user?.email || "?")
-                .charAt(0)
-                .toUpperCase()}
+              {getAvatarInitials(user)}
             </Link>
           </div>
         </header>
@@ -995,8 +1066,8 @@ function Logo() {
     <div className="brand landing-brand">
       <img
         className="brand-image"
-        src="/careergps-logo.jpg"
-        alt="CareerGPS — Explore, Plan, Learn, Grow"
+        src="/navigoa-logo.jpg"
+        alt="NaviGoa — Navigate, Build, Grow"
       />
     </div>
   );
@@ -1005,42 +1076,56 @@ function Logo() {
 function Landing() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   return (
     <div className="landing">
       <header className="landing-nav">
         <Logo />
-        <nav className="landing-links" aria-label="Primary navigation">
-          <Link to="/careers">Careers</Link>
-          <Link to="/learn">Learn</Link>
-          <Link to="/institutions">Institutions</Link>
-          <Link to="/opportunities">Opportunities</Link>
+        <nav className={`landing-links ${mobileNavOpen ? "open" : ""}`} aria-label="Primary navigation">
+          <Link to="/careers" onClick={() => setMobileNavOpen(false)}>Careers</Link>
+          <Link to="/learn" onClick={() => setMobileNavOpen(false)}>Learn</Link>
+          <Link to="/institutions" onClick={() => setMobileNavOpen(false)}>Institutions</Link>
+          <Link to="/opportunities" onClick={() => setMobileNavOpen(false)}>Opportunities</Link>
         </nav>
         <div className="landing-auth">
           <Link to="/login">Login</Link>
           <Link className="btn primary small" to="/signup">
             Sign Up
           </Link>
+          <button
+            type="button"
+            className="landing-mobile-menu"
+            aria-label={mobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={mobileNavOpen}
+            onClick={() => setMobileNavOpen((open) => !open)}
+          >
+            {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
       </header>
       <section className="hero">
         <img
           className="hero-goa-image"
-          src="/goa-hero.jpg"
-          alt="Goa coastline with palm trees and Arabian Sea"
+          src="/goa-fontainhas-street.jpg"
+          alt="Colourful Portuguese-influenced streets of Fontainhas in Panaji, Goa"
+          width="1920"
+          height="1280"
+          fetchpriority="high"
         />
         <div className="hero-overlay" />
-        <div className="hero-content">
+      <div className="hero-content">
           <div className="eyebrow">
             <Sparkles size={14} /> Career discovery, built for Goa
           </div>
           <h1>
-            Where can your
+            Navigate your future.
             <br />
-            <span>career go next?</span>
+            <span>Discover your opportunities.</span>
           </h1>
           <p>
-            Discover real opportunities based on where you are today — and what
-            you want to achieve.
+            Explore career paths, build in-demand skills, discover employment
+            and internship opportunities across Goa, and turn your learning
+            into a future you can work towards.
           </p>
           <div className="hero-search">
             <Search size={19} />
@@ -1119,6 +1204,36 @@ function Landing() {
           </span>
         </div>
       </section>
+      <section className="goa-story" aria-labelledby="goa-story-title">
+        <div className="goa-story-copy">
+          <div className="section-kicker">ROOTED IN GOA</div>
+          <h2 id="goa-story-title">Built here. Open to what’s next.</h2>
+          <p>
+            NaviGoa connects the character of Goa with practical career
+            direction — helping students, graduates, and working professionals
+            discover paths locally, remotely, and beyond.
+          </p>
+          <Link className="btn outline" to="/opportunities">
+            Explore opportunities <ArrowRight size={16} />
+          </Link>
+        </div>
+        <div className="goa-story-media">
+          <figure className="goa-story-image goa-story-image-main">
+            <img
+              src="/goa-hero.jpg"
+              alt="Goa coastline, palms, and green coastal landscape"
+              width="1296"
+              height="768"
+              loading="lazy"
+            />
+            <figcaption>Goa’s coastline and green hinterland</figcaption>
+          </figure>
+          <div className="goa-story-note">
+            <MapPin size={16} />
+            <span>Career guidance with a Goa-first perspective</span>
+          </div>
+        </div>
+      </section>
       <section className="landing-journey" aria-labelledby="journey-title">
         <div>
           <div className="section-kicker">A CLEARER NEXT STEP</div>
@@ -1158,7 +1273,7 @@ function Landing() {
           <Link id="opportunities" to="/opportunities">
             <BriefcaseBusiness />
             <h3>Find opportunities</h3>
-            <p>Review sourced openings when they are available to CareerGPS.</p>
+            <p>Review sourced openings when they are available to NaviGoa.</p>
             <span>
               View opportunities <ArrowRight size={15} />
             </span>
@@ -1186,19 +1301,27 @@ function Signup() {
   const [show, setShow] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+    setPasswordError("");
+    setEmailError("");
+
+    if (form.password.length < 8) {
+      setPasswordError("Password must be at least 8 characters long.");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      // /auth/register only accepts { email, password, role? } - "name" is an
-      // unrecognized key and would fail backend validation, so it's kept out
-      // of the request body and stored locally for display purposes only.
       const res = await api.register({
         email: form.email,
         password: form.password,
+        full_name: form.name?.trim() || undefined,
       });
       // Confirmed against backend src/modules/auth/auth.service.js:
       // register() returns { user, accessToken } directly (no data wrapper).
@@ -1221,9 +1344,13 @@ function Signup() {
       await refreshUser();
       navigate("/onboarding");
     } catch (err) {
-      setError(
-        err.message || "Could not create your account. Please try again.",
-      );
+      if (err.code === "EMAIL_ALREADY_EXISTS") {
+        setEmailError("This email is already registered. Please log in instead.");
+      } else {
+        setError(
+          err.message || "Could not create your account. Please try again.",
+        );
+      }
     } finally {
       setSubmitting(false);
     }
@@ -1231,69 +1358,100 @@ function Signup() {
 
   return (
     <div className="auth-page">
-      <div className="auth-brand">
-        <Logo />
-      </div>
-      <div className="auth-card">
-        <div className="auth-heading">
-          <div className="auth-icon">
-            <Compass />
-          </div>
-          <h1>Create your account</h1>
-          <p>Start your career journey</p>
+      <div className="auth-container">
+        <div className="auth-brand-header">
+          <Link to="/" className="brand-link" aria-label="NaviGoa home">
+            <img
+              className="auth-logo-img"
+              src="/navigoa-logo.jpg"
+              alt="NaviGoa — Navigate, Build, Grow"
+              width="210"
+              height="140"
+            />
+          </Link>
         </div>
-        <form className="form-stack" onSubmit={handleSubmit}>
-          <label>
-            Full name
-            <input
-              required
-              placeholder="Enter your name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-          </label>
-          <label>
-            Email address
-            <input
-              required
-              type="email"
-              placeholder="you@example.com"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-            />
-          </label>
-          <label>
-            Password
-            <div className="password">
+        <div className="auth-card">
+          <div className="auth-heading">
+            <h1>Create your account</h1>
+            <p>Start your NaviGoa career journey</p>
+          </div>
+          <form className="form-stack" onSubmit={handleSubmit}>
+            <label>
+              Full name
               <input
                 required
-                type={show ? "text" : "password"}
-                placeholder="Create a password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                placeholder="Enter your name"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
-              <button type="button" onClick={() => setShow((v) => !v)}>
-                {show ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-          </label>
-          {error && (
-            <p style={{ color: "var(--red)", fontSize: 11, margin: 0 }}>
-              {error}
-            </p>
-          )}
-          <button
-            className="btn primary full"
-            type="submit"
-            disabled={submitting}
-          >
-            {submitting ? "Creating account..." : "Sign Up"}
-          </button>
-        </form>
+            </label>
+            <label>
+              Email address
+              <input
+                required
+                type="email"
+                placeholder="you@example.com"
+                value={form.email}
+                aria-invalid={!!emailError}
+                onChange={(e) => {
+                  setForm({ ...form, email: e.target.value });
+                  if (emailError) setEmailError("");
+                }}
+              />
+              {emailError && (
+                <p style={{ color: "var(--red)", fontSize: 11, margin: "4px 0 0 0" }} role="alert">
+                  {emailError}
+                </p>
+              )}
+            </label>
+            <label>
+              Password
+              <div className="password">
+                <input
+                  required
+                  type={show ? "text" : "password"}
+                  placeholder="Create a password"
+                  value={form.password}
+                  aria-invalid={!!passwordError}
+                  onChange={(e) => {
+                    setForm({ ...form, password: e.target.value });
+                    if (e.target.value.length >= 8 && passwordError) {
+                      setPasswordError("");
+                    }
+                  }}
+                />
+                <button type="button" onClick={() => setShow((v) => !v)}>
+                  {show ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {passwordError && (
+                <p style={{ color: "var(--red)", fontSize: 11, margin: "4px 0 0 0" }} role="alert">
+                  {passwordError}
+                </p>
+              )}
+            </label>
+            {error && (
+              <p style={{ color: "var(--red)", fontSize: 11, margin: 0 }}>
+                {error}
+              </p>
+            )}
+            <button
+              className="btn primary full auth-submit-btn"
+              type="submit"
+              disabled={submitting}
+            >
+              {submitting ? "Creating account..." : "Sign Up"}
+            </button>
+          </form>
 
-        <p className="auth-footer">
-          Already have an account? <Link to="/login">Log in</Link>
-        </p>
+          <p className="auth-footer">
+            Already have an account? <Link to="/login">Log in</Link>
+          </p>
+        </div>
+
+        <Link to="/" className="auth-back-link">
+          <ArrowLeft size={15} /> Back to home
+        </Link>
       </div>
     </div>
   );
@@ -1301,14 +1459,23 @@ function Signup() {
 
 function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { refreshUser } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [generalError, setGeneralError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const from = location.state?.from?.pathname || "/dashboard";
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setError("");
+    if (submitting) return;
+    setEmailError("");
+    setPasswordError("");
+    setGeneralError("");
     setSubmitting(true);
     try {
       const res = await api.login({
@@ -1321,13 +1488,15 @@ function Login() {
         throw new Error("Login succeeded but no access token was returned.");
       setToken(token);
       await refreshUser();
-      navigate("/dashboard");
+      navigate(from, { replace: true });
     } catch (err) {
-      setError(
-        err.status === 401
-          ? "Incorrect email or password."
-          : err.message || "Login failed. Please try again.",
-      );
+      if (err.code === "UNKNOWN_EMAIL") {
+        setEmailError("This email is not registered with NaviGoa.");
+      } else if (err.code === "INVALID_PASSWORD") {
+        setPasswordError("Incorrect password. Please try again.");
+      } else {
+        setGeneralError(err.message || "Login failed. Please try again.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -1335,55 +1504,111 @@ function Login() {
 
   return (
     <div className="auth-page">
-      <div className="auth-brand">
-        <Logo />
-      </div>
-      <div className="auth-card">
-        <div className="auth-heading">
-          <div className="auth-icon">
-            <LockKeyhole />
-          </div>
-          <h1>Welcome back</h1>
-          <p>Continue your CareerGPS journey</p>
+      <div className="auth-container">
+        <div className="auth-brand-header">
+          <Link to="/" className="brand-link" aria-label="NaviGoa home">
+            <img
+              className="auth-logo-img"
+              src="/navigoa-logo.jpg"
+              alt="NaviGoa — Navigate, Build, Grow"
+              width="210"
+              height="140"
+            />
+          </Link>
         </div>
-        <form className="form-stack" onSubmit={handleSubmit}>
-          <label>
-            Email address
-            <input
-              required
-              type="email"
-              placeholder="you@example.com"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-            />
-          </label>
-          <label>
-            Password
-            <input
-              required
-              type="password"
-              placeholder="Your password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-            />
-          </label>
-          {error && (
-            <p style={{ color: "var(--red)", fontSize: 11, margin: 0 }}>
-              {error}
-            </p>
-          )}
-          <button
-            className="btn primary full"
-            type="submit"
-            disabled={submitting}
-          >
-            {submitting ? "Logging in..." : "Log In"}
-          </button>
-        </form>
 
-        <p className="auth-footer">
-          New to CareerGPS? <Link to="/signup">Create an account</Link>
-        </p>
+        <div className="auth-card">
+          <div className="auth-heading">
+            <h1>Welcome back</h1>
+            <p>Sign in to continue your NaviGoa career journey.</p>
+          </div>
+
+          <form className="form-stack" onSubmit={handleSubmit} noValidate>
+            <label htmlFor="login-email">
+              Email address
+              <input
+                id="login-email"
+                name="email"
+                required
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                value={form.email}
+                aria-invalid={!!emailError}
+                aria-describedby={emailError ? "login-email-error" : undefined}
+                onChange={(e) => {
+                  setForm({ ...form, email: e.target.value });
+                  if (emailError) setEmailError("");
+                  if (generalError) setGeneralError("");
+                }}
+              />
+              {emailError && (
+                <p id="login-email-error" className="auth-error-text" role="alert">
+                  {emailError}
+                </p>
+              )}
+            </label>
+
+            <label htmlFor="login-password">
+              Password
+              <div className="auth-password-wrapper">
+                <input
+                  id="login-password"
+                  name="password"
+                  required
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  placeholder="Enter your password"
+                  value={form.password}
+                  aria-invalid={!!passwordError}
+                  aria-describedby={passwordError ? "login-password-error" : undefined}
+                  onChange={(e) => {
+                    setForm({ ...form, password: e.target.value });
+                    if (passwordError) setPasswordError("");
+                    if (generalError) setGeneralError("");
+                  }}
+                />
+                <button
+                  type="button"
+                  className="auth-password-toggle"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              {passwordError && (
+                <p id="login-password-error" className="auth-error-text" role="alert">
+                  {passwordError}
+                </p>
+              )}
+            </label>
+
+            {generalError && (
+              <div className="auth-general-error" role="alert">
+                <AlertCircle size={16} />
+                <span>{generalError}</span>
+              </div>
+            )}
+
+            <button
+              className="btn primary full auth-submit-btn"
+              type="submit"
+              disabled={submitting}
+            >
+              {submitting ? "Signing in..." : "Log In"}
+            </button>
+          </form>
+
+          <p className="auth-footer">
+            New to NaviGoa? <Link to="/signup">Create an account</Link>
+          </p>
+        </div>
+
+        <Link to="/" className="auth-back-link">
+          <ArrowLeft size={15} /> Back to home
+        </Link>
       </div>
     </div>
   );
@@ -1394,10 +1619,11 @@ function Onboarding() {
   const { refreshUser } = useAuth();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
-    status: "College Student",
-    educationStage: "Currently in 12th",
+    status: "Bachelor Student",
+    educationStage: "Higher Education",
     stream: "",
     degree: "",
+    masterDegree: "",
     specialization: "",
     diplomaField: "",
     currentYear: "",
@@ -1410,6 +1636,7 @@ function Onboarding() {
     skills: [],
     preferredLocation: "Goa + Remote",
     careerGoal: "",
+    careerId: "",
     careerGoalReason: "",
     studyPreference: "Online / Part-time",
   });
@@ -1417,6 +1644,7 @@ function Onboarding() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [validationData, setValidationData] = useState(null);
+  const [validationError, setValidationError] = useState(null);
   const [isValidating, setIsValidating] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
@@ -1425,6 +1653,9 @@ function Onboarding() {
 
   const [availablePrograms, setAvailablePrograms] = useState([]);
   const [programsLoading, setProgramsLoading] = useState(false);
+
+  const [availableMasterPrograms, setAvailableMasterPrograms] = useState([]);
+  const [masterProgramsLoading, setMasterProgramsLoading] = useState(false);
 
   useEffect(() => {
     if (form.educationStage === "Higher Education" || form.educationLevel === "Undergraduate" || form.educationLevel === "Postgraduate") {
@@ -1448,6 +1679,21 @@ function Onboarding() {
     }
   }, [form.stream, form.educationStage, form.educationLevel]);
 
+  useEffect(() => {
+    if (form.status === "Master Student" && form.degree) {
+      setMasterProgramsLoading(true);
+      api.masterPrograms(form.degree).then(res => {
+        setAvailableMasterPrograms(res.data || []);
+      }).catch(err => {
+        console.error("Failed to load master programs:", err);
+      }).finally(() => {
+        setMasterProgramsLoading(false);
+      });
+    } else {
+      setAvailableMasterPrograms([]);
+    }
+  }, [form.degree, form.status]);
+
   function validateStep(currentStep) {
     const missing = [];
     if (currentStep === 1) {
@@ -1457,8 +1703,13 @@ function Onboarding() {
       if (!form.educationStage) missing.push("Education stage");
       if (form.educationStage === "Currently in 12th" && !form.stream) missing.push("12th Stream");
       if (form.educationStage === "Higher Education") {
-        if (!form.stream) missing.push("12th Stream");
-        if (!form.degree) missing.push("Current Education");
+        if (form.status === "Master Student") {
+          if (!form.degree) missing.push("Previous Bachelor's Qualification");
+          if (!form.masterDegree) missing.push("Intended / Current Master's Program");
+        } else {
+          if (!form.stream) missing.push("12th Stream");
+          if (!form.degree) missing.push("Current Education");
+        }
         if (!form.educationStatus) missing.push("Status");
       }
       if (form.educationStage === "Working Professional") {
@@ -1467,11 +1718,11 @@ function Onboarding() {
         if (!form.professionalExperience) missing.push("Years of experience");
       }
     } else if (currentStep === 3) {
-      if (!form.skills || form.skills.length === 0) missing.push("Skills");
-    } else if (currentStep === 4) {
       if (!form.preferredLocation) missing.push("Preferred location");
       if (!form.studyPreference) missing.push("Study preference");
-      if (!form.careerGoal || !form.careerGoal.trim()) missing.push("Career goal");
+      if (!form.careerGoal || !form.careerGoal?.trim()) missing.push("Career goal");
+    } else if (currentStep === 4) {
+      if (!form.skills || form.skills.length === 0) missing.push("Skills");
     }
     return missing;
   }
@@ -1479,9 +1730,9 @@ function Onboarding() {
   const steps = [
     "Basic Information",
     "Education / Experience",
+    "Career Goal & Preferences",
     "Skills & Interests",
-    "Location & Preferences",
-    "Complete",
+    "Review & Complete",
   ];
 
   // Real skills from GET /skills
@@ -1520,15 +1771,32 @@ function Onboarding() {
         })));
       }
 
-      const edu = Array.isArray(p.education) && p.education.length ? p.education[0] : {};
+      const bachelors = Array.isArray(p.education) ? p.education.find(e => e.level === "Undergraduate") : null;
+      const masters = Array.isArray(p.education) ? p.education.find(e => e.level === "Postgraduate") : null;
+      const school = Array.isArray(p.education) ? p.education.find(e => e.education_stage === "SCHOOL_12") : null;
+      
+      const latest = masters || bachelors || school || (Array.isArray(p.education) && p.education.length ? p.education[0] : {});
 
       let eduStage = "Higher Education";
-      if (edu.education_stage === "SCHOOL_12" || edu.level === "12th / Higher Secondary" || edu.level === "12th") {
+      if (latest.education_stage === "SCHOOL_12" || latest.level === "12th / Higher Secondary" || latest.level === "12th") {
         eduStage = "Currently in 12th";
-      } else if (edu.education_stage === "WORKING_PROFESSIONAL" || edu.level === "Working Professional") {
+      } else if (latest.education_stage === "WORKING_PROFESSIONAL" || latest.level === "Working Professional") {
         eduStage = "Working Professional";
-      } else if (!edu.education_stage && !edu.level && !edu.degree) {
+      } else if (!latest.education_stage && !latest.level && !latest.degree) {
         eduStage = "Currently in 12th";
+      }
+
+      let derivedStatus = "Bachelor Student";
+      if (eduStage === "Currently in 12th") {
+        derivedStatus = "Higher Secondary Student";
+      } else if (eduStage === "Working Professional") {
+        derivedStatus = "Working Professional";
+      } else if (eduStage === "Higher Education") {
+        if (masters) {
+          derivedStatus = "Master Student";
+        } else {
+          derivedStatus = "Bachelor Student";
+        }
       }
 
       let exp = "";
@@ -1551,19 +1819,22 @@ function Onboarding() {
 
       setForm(f => ({
         ...f,
+        status: derivedStatus,
         educationStage: eduStage,
-        stream: edu.school_12_stream || edu.stream || "",
-        degree: edu.current_program || edu.degree || "",
-        specialization: edu.specialization || "",
-        diplomaField: edu.diplomaField || "",
-        currentYear: edu.year ? String(edu.year) : "",
-        educationStatus: edu.status ? (edu.status.charAt(0).toUpperCase() + edu.status.slice(1)) : "Pursuing",
+        stream: bachelors?.school_12_stream || bachelors?.stream || latest.school_12_stream || latest.stream || "",
+        degree: bachelors?.current_program || bachelors?.degree || latest.current_program || latest.degree || "",
+        masterDegree: masters?.current_program || masters?.degree || "",
+        specialization: latest.specialization || "",
+        diplomaField: latest.diplomaField || "",
+        currentYear: latest.year ? String(latest.year) : "",
+        educationStatus: latest.status ? (latest.status.charAt(0).toUpperCase() + latest.status.slice(1)) : "Pursuing",
         experience: exp,
         industry: ind,
         currentRole: role,
         professionalExperience: profExp,
         preferredLocation: loc,
         careerGoal: p.career_goal || "",
+        careerId: p.career_id || "",
         skills: existingSkills
       }));
     }).finally(() => {
@@ -1577,7 +1848,7 @@ function Onboarding() {
     setSkillsLoading(true);
     setSkillsError(null);
     api
-      .skills()
+      .skills({ limit: 100 })
       .then((res) => {
         setAllSkills(unwrapList(res));
       })
@@ -1587,15 +1858,82 @@ function Onboarding() {
       .finally(() => setSkillsLoading(false));
   }
 
-  function handleStepForward() {
+  async function handleStepForward() {
     const missing = validateStep(step);
     if (missing.length > 0) {
       setMissingFields(missing);
       setShowValidationPopup(true);
       return;
     }
-    if (step === 2) loadSkills();
-    setStep((s) => s + 1);
+    
+    setError("");
+    setSubmitting(true);
+    
+    try {
+      if (step === 1) {
+        // Save base education structure to lock in the category
+        await api.updateProfile({
+          education: getCleanedEducation(),
+          experience: getCleanedExperience()
+        });
+      } else if (step === 2) {
+        await api.updateProfile({
+          education: getCleanedEducation(),
+          experience: getCleanedExperience()
+        });
+        loadSkills();
+      } else if (step === 3) {
+        // Step 3 is Career Goal & Preferences.
+        if (validationData && validationData.allow_continue === false) {
+          setError(validationData.reason || "Your current background restricts direct progression into this goal.");
+          setSubmitting(false);
+          return;
+        }
+
+        let targetCareerId = form.careerId;
+        if (form.careerGoal?.trim() && !validationData) {
+          try {
+            const valRes = await api.validateGoal({
+              goal: form.careerGoal,
+              profileContext: JSON.parse(currentProfileContext)
+            });
+            const vData = unwrapObject(valRes);
+            setValidationData(vData);
+            if (vData?.career_id) targetCareerId = vData.career_id;
+            if (vData && vData.allow_continue === false) {
+              setError(vData.reason || "Your current background restricts direct progression into this goal.");
+              setSubmitting(false);
+              return;
+            }
+          } catch (vErr) {
+            console.error("Goal validation check failed:", vErr);
+          }
+        }
+
+        await api.updateProfile({
+          education: getCleanedEducation(),
+          experience: getCleanedExperience(),
+          preferred_locations: parseLocations(form.preferredLocation),
+          career_goal: validationData?.goal || form.careerGoal || null,
+          career_id: validationData?.career_id || targetCareerId || null,
+          constraints: { study_mode: STUDY_MODE_MAP[form.studyPreference] || [] },
+        });
+        loadSkills();
+      } else if (step === 4) {
+        // Step 4 is Skills & Interests. Persist chosen skills.
+        await api.updateMySkills({
+          skills: form.skills.filter((s) => !s.is_custom).map((s) => ({
+            skill_id: s.skill_id || s.id,
+            level: s.level || "beginner",
+          })),
+        });
+      }
+      setStep((s) => s + 1);
+    } catch (err) {
+      setError(err.message || "Failed to save your progress. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function toggleSkill(skill) {
@@ -1616,48 +1954,81 @@ function Onboarding() {
       }
     }
 
-    setForm((f) => {
-      const already = f.skills.some((s) => s.skill_id === skillId);
-      return {
-        ...f,
-        skills: already
-          ? f.skills.filter((s) => s.skill_id !== skillId)
-          : [
-            ...f.skills,
-            { skill_id: skillId, name: skillName, level: "beginner", is_custom: isCustom },
-          ],
-      };
-    });
+    const already = form.skills.some((s) => (s.skill_id || s.id) === skillId);
+    let newSkills = already
+      ? form.skills.filter((s) => (s.skill_id || s.id) !== skillId)
+      : [
+          ...form.skills,
+          { skill_id: skillId, name: skillName, level: "beginner", is_custom: isCustom },
+        ];
+
+    setForm(f => ({ ...f, skills: newSkills }));
+    
+    // Immediately persist
+    try {
+      await api.updateMySkills({
+        skills: newSkills.filter((s) => !s.is_custom).map((s) => ({
+          skill_id: s.skill_id || s.id,
+          level: s.level || "beginner",
+        })),
+      });
+    } catch (err) {
+      console.error("Failed to persist skill selection:", err);
+    }
   }
 
-  function handleEducationStageChange(e) {
-    const newStage = e.target.value;
-    const isPro = newStage === "Working Professional";
-    const wasPro = form.educationStage === "Working Professional";
+  function handleStatusChange(e) {
+    const newStatus = e.target.value;
+    const updates = { status: newStatus };
 
-    const updates = { educationStage: newStage };
+    let newStage = form.educationStage;
 
-    if (isPro && !wasPro) {
-      // Clear student fields
-      updates.stream = "";
+    if (newStatus === "Bachelor Student") {
+      newStage = "Higher Education";
+      updates.masterDegree = "";
+    } else if (newStatus === "Master Student") {
+      newStage = "Higher Education";
+    } else if (newStatus === "Higher Secondary Student") {
+      newStage = "Currently in 12th";
+      updates.educationStatus = "Pursuing";
+    } else if (newStatus === "Working Professional") {
+      newStage = "Working Professional";
+    }
+
+    if (newStage !== form.educationStage) {
+      updates.educationStage = newStage;
+      const isPro = newStage === "Working Professional";
+      const wasPro = form.educationStage === "Working Professional";
+      if (isPro && !wasPro) {
+        updates.stream = "";
+        updates.degree = "";
+        updates.masterDegree = "";
+        updates.specialization = "";
+        updates.diplomaField = "";
+        updates.currentYear = "";
+        updates.experience = "";
+      } else if (!isPro && wasPro) {
+        updates.industry = "";
+        updates.currentRole = "";
+        updates.professionalExperience = "";
+      }
+    }
+
+    if (newStage === "Currently in 12th") {
       updates.degree = "";
+      updates.masterDegree = "";
       updates.specialization = "";
       updates.diplomaField = "";
-      updates.currentYear = "";
-      updates.experience = "";
-    } else if (!isPro && wasPro) {
-      // Clear pro fields
-      updates.industry = "";
-      updates.currentRole = "";
-      updates.professionalExperience = "";
     }
 
     setForm({ ...form, ...updates });
   }
 
+
   function getCleanedEducation() {
-    const edu = {};
+    const list = [];
     if (form.educationStage === "Currently in 12th") {
+      const edu = {};
       edu.education_stage = "SCHOOL_12";
       edu.school_12_status = "PURSUING";
       if (form.stream) {
@@ -1666,27 +2037,51 @@ function Onboarding() {
       }
       edu.status = "pursuing";
       edu.level = "12th / Higher Secondary"; // legacy fallback
+      list.push(edu);
     } else if (form.educationStage === "Higher Education") {
-      edu.education_stage = "HIGHER_EDUCATION";
+      const bachelors = {};
+      bachelors.education_stage = "HIGHER_EDUCATION";
       if (form.stream) {
-        edu.school_12_stream = form.stream;
-        edu.stream = form.stream;
+        bachelors.school_12_stream = form.stream;
+        bachelors.stream = form.stream;
       }
       if (form.degree) {
-        edu.current_program = form.degree;
-        edu.degree = form.degree;
+        bachelors.current_program = form.degree;
+        bachelors.degree = form.degree;
       }
-      if (form.specialization) edu.specialization = form.specialization;
+      if (form.specialization) bachelors.specialization = form.specialization;
+      if (form.diplomaField) bachelors.diplomaField = form.diplomaField;
       if (form.currentYear && !isNaN(parseInt(form.currentYear))) {
-        edu.year = parseInt(form.currentYear);
+        bachelors.year = parseInt(form.currentYear);
       }
-      edu.status = (form.educationStatus || "pursuing").toLowerCase();
-      edu.level = "Undergraduate"; // legacy fallback
+      bachelors.level = "Undergraduate";
+
+      if (form.status === "Master Student") {
+        // If master student, bachelor's is completed, and we push master's as well
+        bachelors.status = "completed";
+        list.push(bachelors);
+
+        const masters = {};
+        masters.education_stage = "HIGHER_EDUCATION";
+        masters.level = "Postgraduate";
+        if (form.masterDegree) {
+          masters.current_program = form.masterDegree;
+          masters.degree = form.masterDegree;
+        }
+        if (form.specialization) masters.specialization = form.specialization;
+        masters.status = (form.educationStatus || "pursuing").toLowerCase();
+        list.push(masters);
+      } else {
+        bachelors.status = (form.educationStatus || "pursuing").toLowerCase();
+        list.push(bachelors);
+      }
     } else {
+      const edu = {};
       edu.education_stage = "WORKING_PROFESSIONAL";
       edu.level = "Working Professional"; // legacy fallback
+      list.push(edu);
     }
-    return [edu];
+    return list;
   }
 
   function getCleanedExperience() {
@@ -1701,7 +2096,7 @@ function Onboarding() {
     }
   }
 
-  const [lastValidatedGoal, setLastValidatedGoal] = useState("");
+  const lastValidatedGoalRef = useRef("");
 
   const currentProfileContext = JSON.stringify({
     education: getCleanedEducation(),
@@ -1710,17 +2105,21 @@ function Onboarding() {
   });
 
   useEffect(() => {
-    if (step !== 4 || !form.careerGoal.trim()) {
+    if (step !== 3 || !form.careerGoal?.trim()) {
       if (validationData) setValidationData(null);
+      setValidationError(null);
+      setIsValidating(false);
+      lastValidatedGoalRef.current = "";
       return;
     }
     const validationKey = `${form.careerGoal}::${currentProfileContext}`;
-    if (validationKey === lastValidatedGoal) return;
+    if (validationKey === lastValidatedGoalRef.current) return;
 
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       setIsValidating(true);
       setValidationData(null);
+      setValidationError(null);
       setError("");
       try {
         const valRes = await api.validateGoal(
@@ -1728,12 +2127,18 @@ function Onboarding() {
           { signal: controller.signal }
         );
         if (!controller.signal.aborted) {
-          setValidationData(unwrapObject(valRes));
-          setLastValidatedGoal(validationKey);
+          const vData = unwrapObject(valRes);
+          setValidationData(vData);
+          setValidationError(null);
+          lastValidatedGoalRef.current = validationKey;
+          if (vData?.career_id) {
+            setForm(f => ({ ...f, careerId: vData.career_id }));
+          }
         }
       } catch (err) {
-        if (err.name === 'AbortError' || err.code === 'TIMEOUT') return;
+        if (controller.signal.aborted || err.name === 'AbortError' || err.code === 'TIMEOUT' || err.code === 'CANCELLED') return;
         console.error("Live validation failed", err);
+        setValidationError(err?.message || "Failed to validate career goal.");
       } finally {
         if (!controller.signal.aborted) setIsValidating(false);
       }
@@ -1742,7 +2147,7 @@ function Onboarding() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [form.careerGoal, step, lastValidatedGoal, currentProfileContext, validationData]);
+  }, [form.careerGoal, step, currentProfileContext]);
 
   async function validateAndFinish() {
     const allMissing = [];
@@ -1756,12 +2161,12 @@ function Onboarding() {
       return;
     }
 
-    if (!form.careerGoal.trim()) {
+    if (!form.careerGoal?.trim()) {
       return finish();
     }
     const validationKey = `${form.careerGoal}::${currentProfileContext}`;
-    if (validationData && lastValidatedGoal === validationKey) {
-      if (['RED', 'INVALID_GOAL'].includes(validationData.classification)) return;
+    if (validationData && lastValidatedGoalRef.current === validationKey) {
+      if (validationData && validationData.allow_continue === false) return;
       return finish();
     }
     setIsValidating(true);
@@ -1774,10 +2179,10 @@ function Onboarding() {
       });
       const data = unwrapObject(valRes);
       setValidationData(data);
-      setLastValidatedGoal(validationKey);
-      if (data.classification !== 'RED') {
-        return finish();
-      }
+      lastValidatedGoalRef.current = validationKey;
+      if (data && data.allow_continue === false) return;
+      return finish();
+
     } catch (err) {
       setError(err.message || "Failed to validate goal.");
       setValidationData(null);
@@ -1803,7 +2208,7 @@ function Onboarding() {
     try {
       await api.updateMySkills({
         skills: form.skills.filter((s) => !s.is_custom).map((s) => ({
-          skill_id: s.skill_id,
+          skill_id: s.skill_id || s.id,
           level: s.level || "beginner",
         })),
       });
@@ -1813,7 +2218,7 @@ function Onboarding() {
         interests: [],
         preferred_locations: parseLocations(form.preferredLocation),
         career_goal: validationData?.goal || form.careerGoal || null,
-        career_id: validationData?.career_id || null,
+        career_id: validationData?.career_id || form.careerId || null,
         constraints: { study_mode: STUDY_MODE_MAP[form.studyPreference] || [] },
       });
       await refreshUser();
@@ -1867,11 +2272,17 @@ function Onboarding() {
                   : step === 2
                     ? "Your education and experience"
                     : step === 3
-                      ? "What are you good at?"
-                      : "Where do you want to build your career?"}
+                      ? "Where do you want to build your career?"
+                      : "What are you good at?"}
               </h1>
               <p className="muted">
-                This helps us show you relevant career options.
+                {step === 1
+                  ? "This helps us show you relevant career options."
+                  : step === 2
+                    ? "Tell us your qualifications to customize your progression."
+                    : step === 3
+                      ? "Select your target career goal and location preferences to personalize role-specific skills."
+                      : `Browse core competencies and supporting skills for ${validationData?.goal || form.careerGoal || "your target role"}.`}
               </p>
 
               {step === 1 && (
@@ -1880,11 +2291,12 @@ function Onboarding() {
                     I am a
                     <select
                       value={form.status}
-                      onChange={(e) => setForm({ ...form, status: e.target.value })}
+                      onChange={handleStatusChange}
                     >
-                      <option>College Student</option>
+                      <option>Higher Secondary Student</option>
+                      <option>Bachelor Student</option>
+                      <option>Master Student</option>
                       <option>Working Professional</option>
-                      <option>Recent Graduate</option>
                     </select>
                   </label>
                   <label>
@@ -1903,17 +2315,6 @@ function Onboarding() {
 
               {step === 2 && (
                 <div className="form-stack">
-                  <label>
-                    What best describes you?
-                    <select
-                      value={form.educationStage}
-                      onChange={handleEducationStageChange}
-                    >
-                      <option>Currently in 12th</option>
-                      <option>Higher Education</option>
-                      <option>Working Professional</option>
-                    </select>
-                  </label>
 
                   {form.educationStage === "Working Professional" ? (
                     <>
@@ -1970,46 +2371,120 @@ function Onboarding() {
                           onChange={(e) => setForm({ ...form, stream: e.target.value })}
                         >
                           <option value="">Select Stream</option>
-                          <option>Science</option>
                           <option>Science — PCM</option>
                           <option>Science — PCB</option>
                           <option>Science — PCMB</option>
-                          <option>Commerce</option>
-                          <option>Arts / Humanities</option>
+                          <option>Science — PCM + Computer Science</option>
+                          <option>Science — PCB + Computer Science/IP</option>
+                          <option>Science — Other</option>
+                          <option>Commerce with Mathematics</option>
+                          <option>Commerce without Mathematics</option>
+                          <option>Commerce + Computer Science/IP</option>
+                          <option>Humanities with Mathematics</option>
+                          <option>Humanities without Mathematics</option>
                           <option>Vocational</option>
+                          <option>Custom</option>
                         </select>
                       </label>
 
                       {form.educationStage === "Higher Education" && (
                         <>
                           <label>
-                            Current Education / Program
+                            {form.status === "Master Student" ? "Previous Bachelor's Qualification" : "Current Education / Program"}
                             {programsLoading ? (
                               <div style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>Loading programs...</div>
                             ) : (
-                              <select
-                                value={form.degree}
-                                onChange={(e) => setForm({ ...form, degree: e.target.value })}
-                              >
-                                <option value="">Select Program</option>
-                                {availablePrograms.map(p => (
-                                  <option key={p} value={p}>{p}</option>
-                                ))}
+                              <>
+                                <select
+                                  value={form.degree}
+                                  onChange={(e) => setForm({ ...form, degree: e.target.value })}
+                                >
+                                  <option value="">Select Program</option>
+                                  {availablePrograms.map(p => (
+                                    <option key={p} value={p}>{p}</option>
+                                  ))}
+                                </select>
                                 {availablePrograms.length === 0 && !form.stream && (
-                                  <option disabled>Select 12th Stream first</option>
+                                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                    Select 12th Stream first.
+                                  </div>
                                 )}
                                 {availablePrograms.length === 0 && form.stream && (
-                                  <option disabled>No eligible bachelor's programs found for the selected subjects.</option>
+                                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                    No eligible bachelor's programs found for the selected subjects.
+                                  </div>
                                 )}
-                              </select>
+                              </>
                             )}
+                          </label>
+
+                          {form.status === "Master Student" && (
+                            <label>
+                              Intended / Current Master's Program
+                              {masterProgramsLoading ? (
+                                <div style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>Loading programs...</div>
+                              ) : (
+                                <>
+                                  <select
+                                    value={form.masterDegree}
+                                    onChange={(e) => setForm({ ...form, masterDegree: e.target.value })}
+                                  >
+                                    <option value="">Select Program</option>
+                                    {Object.entries(
+                                      availableMasterPrograms.reduce((acc, curr) => {
+                                        if (typeof curr === 'string') {
+                                          if (!acc['Other']) acc['Other'] = [];
+                                          acc['Other'].push(curr);
+                                          return acc;
+                                        }
+                                        if (!acc[curr.discipline]) acc[curr.discipline] = [];
+                                        acc[curr.discipline].push(curr.program);
+                                        return acc;
+                                      }, {})
+                                    ).map(([discipline, programs]) => (
+                                      <optgroup key={discipline} label={discipline}>
+                                        {programs.map(p => <option key={p} value={p}>{p}</option>)}
+                                      </optgroup>
+                                    ))}
+                                  </select>
+                                  {availableMasterPrograms.length === 0 && !form.degree && (
+                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                      Select Previous Bachelor's Qualification first.
+                                    </div>
+                                  )}
+                                  {availableMasterPrograms.length === 0 && form.degree && (
+                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                      No eligible master's programs found for this qualification. Please contact support.
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </label>
+                          )}
+
+                          <label>
+                            Specialization / Major (Optional)
+                            <input
+                              placeholder="e.g. Artificial Intelligence, Marketing"
+                              value={form.specialization}
+                              onChange={(e) => setForm({ ...form, specialization: e.target.value })}
+                            />
                           </label>
 
                           <label>
                             Status
                             <select
                               value={form.educationStatus}
-                              onChange={(e) => setForm({ ...form, educationStatus: e.target.value })}
+                              onChange={(e) => {
+                                const newEdStatus = e.target.value;
+                                // In the new UI, if they are a Master Student, they stay a Master Student whether pursuing or completed.
+                                // If they are a Bachelor Student, they stay a Bachelor Student whether pursuing or completed.
+                                // We don't automatically downgrade them or change their category based on pursuing/completed anymore.
+                                setForm({ 
+                                  ...form, 
+                                  educationStatus: newEdStatus
+                                });
+                              }}
                             >
                               <option>Pursuing</option>
                               <option>Completed</option>
@@ -2031,34 +2506,7 @@ function Onboarding() {
                 </div>
               )}
 
-              {step === 3 &&
-                (skillsLoading ? (
-                  <LoadingState label="Loading skills from CareerGPS..." />
-                ) : skillsError ? (
-                  <div className="empty-state">
-                    <CircleHelp size={20} />
-                    <h2>Could not load skills</h2>
-                    <p>{skillsError}</p>
-                    <button className="btn outline" onClick={loadSkills}>
-                      Try again
-                    </button>
-                  </div>
-                ) : allSkills.length === 0 ? (
-                  <p className="muted">
-                    No skills are published in the CareerGPS database yet. You
-                    can add skills from the Profile page after setup.
-                  </p>
-                ) : (
-                  <SkillPicker
-                    userSkillIds={new Set(form.skills.map(s => s.skill_id || s.id))}
-                    selectedSkills={form.skills.map(s => ({ id: s.skill_id, name: s.name }))}
-                    toggleSkill={toggleSkill}
-                    careerGoal={form.careerGoal}
-                    educationContext={[form.educationStage, form.stream, form.degree, form.specialization, form.industry, form.currentRole].filter(Boolean).join(' ')}
-                  />
-                ))}
-
-              {step === 4 && (
+              {step === 3 && (
                 <div className="form-stack">
                   <label>
                     Preferred locations
@@ -2093,102 +2541,66 @@ function Onboarding() {
                           setForm({ ...form, careerGoal: e.target.value });
                           if (validationData) setValidationData(null);
                         }}
-                        placeholder="e.g. Backend Developer"
+                        placeholder="e.g. Data Analyst, Backend Developer, Chef, Lawyer"
                       />
                     </label>
 
-                    {isValidating && (
-                      <div style={{ padding: "16px 0", textAlign: "center" }}>
-                        <span style={{ fontSize: 14, color: "var(--brand)" }}>Checking your career goal...</span>
-                      </div>
-                    )}
-                    {validationData && (
-                      <div className="validation-result-card" style={{
-                        marginTop: 12,
-                        padding: 16,
-                        borderRadius: 8,
-                        border: `1px solid ${['RED', 'INVALID_GOAL'].includes(validationData.classification) ? 'var(--red)' : validationData.classification === 'YELLOW' ? '#eab308' : validationData.classification === 'GREEN' ? 'var(--green)' : 'var(--text-muted)'}`,
-                        background: ['RED', 'INVALID_GOAL'].includes(validationData.classification) ? 'rgba(255,0,0,0.05)' : validationData.classification === 'YELLOW' ? 'rgba(234,179,8,0.05)' : validationData.classification === 'GREEN' ? 'rgba(0,128,0,0.05)' : 'rgba(0,0,0,0.05)'
-                      }}>
-                        <h4 style={{
-                          marginBottom: 8,
-                          display: 'flex', alignItems: 'center', gap: 6,
-                          color: ['RED', 'INVALID_GOAL'].includes(validationData.classification) ? 'var(--red)' : validationData.classification === 'YELLOW' ? '#ca8a04' : validationData.classification === 'GREEN' ? 'var(--green)' : 'var(--text-muted)'
-                        }}>
-                          {validationData.classification === 'INVALID_GOAL' ? <><XCircle size={18} /> Invalid Goal</> :
-                              ['RED', 'INVALID_GOAL'].includes(validationData.classification) ? <><XCircle size={18} /> Career Conflict</> :
-                                validationData.classification === 'YELLOW' ? <><CheckCircle size={18} /> Challenging path, but achievable</> :
-                                  validationData.classification === 'NOT_FOUND' ? <><HelpCircle size={18} /> Career not found</> :
-                                    validationData.classification === 'UNKNOWN' ? <><HelpCircle size={18} /> Career requirements unavailable</> :
-                                      <><CheckCircle size={18} /> Highly aligned</>}
-                        </h4>
-
-                        <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
-                          {validationData.classification === 'GREEN' && (
-                            <p>{validationData.reason || "Your education provides a strong foundation for this career."}</p>
-                          )}
-                          {validationData.classification === 'YELLOW' && (
-                            <>
-                              <p style={{ marginBottom: 12 }}>{validationData.reason || "Your current education is not the standard route, but this career can still be pursued with additional preparation."}</p>
-                              {validationData.missing_requirements?.length > 0 && (
-                                <div style={{ marginBottom: 12 }}>
-                                  <strong>Your next steps:</strong>
-                                  <ul style={{ marginLeft: 20, marginTop: 4 }}>
-                                    {validationData.missing_requirements.map((req, idx) => <li key={`req-${idx}`}>{req}</li>)}
-                                    {validationData.skill_gaps?.map((gap, idx) => <li key={`gap-${idx}`}>{gap}</li>)}
-                                  </ul>
-                                </div>
-                              )}
-                              {validationData.encouragement && (
-                                <p style={{ margin: 0, color: 'var(--brand)', fontWeight: 500 }}>{validationData.encouragement}</p>
-                              )}
-                            </>
-                          )}
-                          {validationData.classification === 'INVALID_GOAL' && (
-                            <p>{validationData.reason || "Please enter a valid career or occupation."}</p>
-                          )}
-                          {['RED', 'INVALID_GOAL'].includes(validationData.classification) && (
-                            <>
-                              <p style={{ marginBottom: 12 }}>{validationData.reason || "Your current educational background does not satisfy the formal prerequisites for this career."}</p>
-                              {validationData.formal_barriers?.length > 0 && (
-                                <div style={{ marginBottom: 12 }}>
-                                  <strong>Required:</strong>
-                                  <ul style={{ marginLeft: 20, marginTop: 4 }}>
-                                    {validationData.formal_barriers.map((bar, idx) => <li key={`bar-${idx}`}>{bar}</li>)}
-                                  </ul>
-                                </div>
-                              )}
-                            </>
-                          )}
-
-                          {validationData.classification === 'UNKNOWN' && (
-                            <p>This appears to be a recognized career, but we don't have detailed prerequisite rules for it yet. You can still proceed.</p>
-                          )}
-                          {validationData.classification === 'NOT_FOUND' && (
-                            <p>We couldn't find this career in the CareerGPS career catalogue.</p>
-                          )}
-
-                          {validationData.classification === 'INVALID_GOAL' && (
-                            <p>{validationData.reason || "Please enter a valid career or occupation."}</p>
-                          )}
-                          {['RED', 'INVALID_GOAL'].includes(validationData.classification) && (
-                            <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
-                              <button
-                                className="btn outline sm"
-                                onClick={() => {
-                                  setValidationData(null);
-                                  setLastValidatedGoal("");
-                                  setForm({ ...form, careerGoal: "" });
-                                }}
-                              >
-                                Change Career Goal
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                    <OnboardingGoalFeasibilityCard
+                      validationData={validationData}
+                      isValidating={isValidating}
+                      careerGoal={form.careerGoal}
+                      validationError={validationError}
+                      onRetry={() => {
+                        lastValidatedGoalRef.current = "";
+                        setValidationError(null);
+                        setIsValidating(true);
+                        api.validateGoal(
+                          { goal: form.careerGoal, profileContext: JSON.parse(currentProfileContext) }
+                        ).then((valRes) => {
+                          const vData = unwrapObject(valRes);
+                          setValidationData(vData);
+                          setValidationError(null);
+                          lastValidatedGoalRef.current = `${form.careerGoal}::${currentProfileContext}`;
+                          if (vData?.career_id) {
+                            setForm((f) => ({ ...f, careerId: vData.career_id }));
+                          }
+                        }).catch((err) => {
+                          console.error("Retry validation failed", err);
+                          setValidationError(err?.message || "Failed to validate career goal.");
+                        }).finally(() => {
+                          setIsValidating(false);
+                        });
+                      }}
+                      onReset={() => {
+                        setValidationData(null);
+                        setValidationError(null);
+                        lastValidatedGoalRef.current = "";
+                        setForm({ ...form, careerGoal: "", careerId: null });
+                      }}
+                    />
                   </div>
+                </div>
+              )}
+
+              {step === 4 && (
+                <div className="onboarding-skills-wrapper" style={{ marginTop: 8 }}>
+                  <SkillsInterestsPanel
+                    userSkillIds={new Set(form.skills.map(s => s.skill_id || s.id))}
+                    selectedSkillsObjects={form.skills}
+                    allSkills={allSkills}
+                    careerGoal={validationData?.goal || form.careerGoal}
+                    careerId={validationData?.career_id || form.careerId}
+                    educationContext={[form.educationStage, form.stream, form.degree, form.specialization, form.industry, form.currentRole].filter(Boolean).join(' ')}
+                    onToggleSkill={toggleSkill}
+                    onAddCustomSkill={async (name) => {
+                      try {
+                        const added = unwrapObject(await api.addCustomSkill({ name, level: "beginner" }));
+                        toggleSkill({ id: added.id, name: added.name, is_custom: true });
+                      } catch (err) {
+                        console.error("Failed to add custom skill", err);
+                      }
+                    }}
+                  />
                 </div>
               )}
 
@@ -2197,9 +2609,9 @@ function Onboarding() {
                   className="btn ghost"
                   disabled={step === 1 || isValidating || submitting}
                   onClick={() => {
-                    if (validationData && ['RED', 'INVALID_GOAL'].includes(validationData.classification)) {
+                    if (validationData && ['D'].includes(validationData.classification)) {
                       setValidationData(null);
-                      setLastValidatedGoal("");
+                      lastValidatedGoalRef.current = "";
                     } else {
                       setStep((s) => s - 1);
                     }
@@ -2209,46 +2621,127 @@ function Onboarding() {
                 </button>
 
                 {step === 4 ? (
-                  (validationData && ['RED', 'INVALID_GOAL'].includes(validationData.classification)) ? null :
-                  (!validationData) ? (
-                    <button
-                      className="btn primary"
-                      disabled={submitting || isValidating}
-                      onClick={validateAndFinish}
-                    >
-                      {submitting ? "Saving..." : "Finish"} <ArrowRight />
-                    </button>
-                  ) : (
-                    <button
-                      className="btn primary"
-                      disabled={submitting || isValidating}
-                      onClick={finish}
-                    >
-                      {submitting ? "Saving..." : validationData.classification === 'GREEN' ? "Continue" : "Continue with this goal"} <ArrowRight />
-                    </button>
-                  )
+                  <button
+                    className="btn primary"
+                    disabled={submitting || form.skills.length === 0}
+                    onClick={handleStepForward}
+                  >
+                    {submitting ? "Saving..." : "Review & Complete"} <ArrowRight />
+                  </button>
                 ) : (
                   <button
                     className="btn primary"
-                    disabled={submitting || (step === 3 && skillsLoading) || isValidating}
+                    disabled={submitting || (step === 3 && isValidating)}
                     onClick={handleStepForward}
                   >
-                    Next <ArrowRight />
+                    {submitting ? "Saving..." : isValidating ? "Validating..." : "Next"} <ArrowRight />
                   </button>
                 )}
               </div>
             </>
           ) : (
-            <div className="complete-state">
-              <div className="success-orb">
-                <CheckCircle2 size={42} />
+            <div className="onboarding-review-card" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div className="success-orb" style={{ margin: 0, width: 48, height: 48 }}>
+                  <CheckCircle2 size={26} />
+                </div>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '1.35rem', color: 'var(--text)' }}>Review & Complete Setup</h2>
+                  <p className="muted" style={{ margin: '4px 0 0 0', fontSize: '0.875rem' }}>
+                    Confirm your profile summary and personalized career intelligence.
+                  </p>
+                </div>
               </div>
-              <h1>Your profile is ready.</h1>
-              <p>We can now personalize careers, skill gaps and pathways around your goals.</p>
-              {error && <p style={{ color: "var(--red)", fontSize: 12, marginTop: 12 }}>{error}</p>}
-              <button className="btn primary" style={{ marginTop: 24 }} onClick={() => navigate("/dashboard")}>
-                Go to my dashboard <ArrowRight />
-              </button>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+                <div style={{ background: '#f8fafc', padding: 16, borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>
+                    Status & Location
+                  </div>
+                  <div style={{ fontWeight: 600, color: 'var(--text)' }}>
+                    {form.status} • {form.location}
+                  </div>
+                  <div style={{ fontSize: '0.825rem', color: '#64748b', marginTop: 4 }}>
+                    Preferred: {form.preferredLocation} ({form.studyPreference})
+                  </div>
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: 16, borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>
+                    Education Background
+                  </div>
+                  <div style={{ fontWeight: 600, color: 'var(--text)' }}>
+                    {form.degree || form.masterDegree || form.stream || form.educationStage}
+                  </div>
+                  {form.specialization && (
+                    <div style={{ fontSize: '0.825rem', color: 'var(--brand)', marginTop: 2 }}>
+                      Specialization: {form.specialization}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: 16, borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>
+                    Target Career Goal
+                  </div>
+                  <div style={{ fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span>{validationData?.goal || form.careerGoal || "Not selected"}</span>
+                  </div>
+                  {validationData?.classification && (
+                    <div style={{ fontSize: '0.825rem', marginTop: 4, color: validationData.classification === 'A' ? 'var(--green)' : 'var(--brand)' }}>
+                      {validationData.classification === 'A' ? "✓ Highly aligned with foundation" : validationData.classification === 'B' || validationData.classification === 'C' ? "⚡ Achievable route with preparation" : "Route under review"}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ background: '#f8fafc', padding: 16, borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                    Selected Competencies ({form.skills.length})
+                  </div>
+                  <button
+                    type="button"
+                    className="btn text sm"
+                    style={{ padding: '2px 8px', fontSize: '0.8rem' }}
+                    onClick={() => setStep(4)}
+                  >
+                    Edit Skills
+                  </button>
+                </div>
+                {form.skills.length > 0 ? (
+                  <div className="chip-picker compact" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {form.skills.map((sk) => (
+                      <span key={sk.skill_id || sk.id} className="chip active" style={{ fontSize: '0.82rem', padding: '4px 10px' }}>
+                        {sk.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>No skills selected yet.</p>
+                )}
+              </div>
+
+              {error && <p style={{ color: "var(--red)", fontSize: 13, margin: 0 }}>{error}</p>}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={() => setStep(4)}
+                  disabled={submitting}
+                >
+                  <ArrowLeft /> Back to Skills
+                </button>
+                <button
+                  type="button"
+                  className="btn primary"
+                  onClick={finish}
+                  disabled={submitting}
+                >
+                  {submitting ? "Completing setup..." : "Complete Setup & Go to Dashboard"} <ArrowRight />
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -2278,215 +2771,552 @@ function Onboarding() {
 function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+
   const [profile, setProfile] = useState(null);
-  const [careers, setCareers] = useState([]);
+  const [profileLoading, setProfileLoading] = useState(true);
+
+  // Pathway state (independent)
   const [pathwaySummary, setPathwaySummary] = useState(null);
-  const [status, setStatus] = useState("loading");
+  const [pathwayLoading, setPathwayLoading] = useState(true);
+  const [pathwayError, setPathwayError] = useState(null);
 
-  useEffect(() => {
+  // Careers state (independent)
+  const [careers, setCareers] = useState([]);
+  const [careersLoading, setCareersLoading] = useState(true);
+  const [careersError, setCareersError] = useState(null);
+
+  const currentGoalTitle = useMemo(() => {
+    const cg = profile?.current_goal;
+    if (cg && typeof cg === "object" && cg.title) return cg.title;
+    if (typeof cg === "string" && cg.trim()) return cg.trim();
+    if (profile?.career_goal && profile.career_goal.trim()) return profile.career_goal.trim();
+    return null;
+  }, [profile]);
+
+  const loadPathway = useCallback(() => {
+    setPathwayLoading(true);
+    setPathwayError(null);
     let active = true;
-    // BACKEND GAP: there is no GET /dashboard on the backend, so this page
-    // is composed from the real endpoints that do exist: the profile (for
-    // the career goal) and the public careers list (for "careers to
-    // explore"). The pathway summary, if any, comes from the most recently
-    // generated pathway id we remembered locally - see setLastPathwayId.
-    Promise.allSettled([api.profile(), api.careers({ limit: 3 })]).then(
-      ([profileRes, careersRes]) => {
-        if (!active) return;
-        if (profileRes.status === "fulfilled") {
-          const p = unwrapObject(profileRes.value);
-          if (p.profile_status !== "complete") {
-            navigate("/onboarding", { replace: true });
-            return;
-          }
-          setProfile(p);
-        } else {
-          setProfile(null);
-        }
-        setCareers(
-          careersRes.status === "fulfilled"
-            ? unwrapList(careersRes.value).map(normalizeCareer)
-            : [],
-        );
 
-        api.userPathways().then((res) => {
-          if (!active) return;
-          const pathways = unwrapList(res);
-          if (pathways.length > 0) {
-            const latest = pathways[0];
-            api.pathwayProgress(latest.id).then(pRes => {
-              if (!active) return;
-              const p = unwrapObject(pRes);
-              setPathwaySummary({ 
-                title: latest.title, 
-                careerTitle: latest.career_title, 
-                status: p.status, 
-                steps: p.steps || [] 
-              });
-            }).catch(() => { });
-          }
-        }).catch(() => { });
-        setStatus("ready");
-      },
-    );
+    api.userPathways()
+      .then((res) => {
+        if (!active) return;
+        const pathways = unwrapList(res);
+        if (pathways.length > 0) {
+          const latest = pathways[0];
+          return api.pathwayProgress(latest.id).then((pRes) => {
+            if (!active) return;
+            const p = unwrapObject(pRes);
+            const steps = p.steps || [];
+            const completed = steps.filter((s) => s.status === "completed").length;
+            const total = steps.length;
+            const remaining = Math.max(0, total - completed);
+            const pct = total ? Math.round((completed / total) * 100) : 0;
+            setPathwaySummary({
+              id: latest.id,
+              title: latest.title,
+              careerTitle: latest.career_title,
+              status: p.status,
+              steps,
+              completed,
+              total,
+              remaining,
+              pct,
+            });
+            setPathwayLoading(false);
+          });
+        } else {
+          setPathwaySummary(null);
+          setPathwayLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!active) return;
+        setPathwayError(err.message || "Unable to load pathway progress.");
+        setPathwayLoading(false);
+      });
+
     return () => {
       active = false;
     };
-  }, [user?.id]);
+  }, []);
 
-  if (status === "loading")
+  const loadCareers = useCallback((goal) => {
+    setCareersLoading(true);
+    setCareersError(null);
+    let active = true;
+
+    function dedupeAndSet(rawItems) {
+      if (!active) return;
+      const normalized = (rawItems || []).map(normalizeCareer);
+      const seenIds = new Set();
+      const seenTitles = new Set();
+      const unique = [];
+      for (const item of normalized) {
+        if (!item) continue;
+        const idKey = item.id ? String(item.id) : null;
+        const titleKey = item.title ? item.title.toLowerCase().trim() : null;
+        if (idKey && seenIds.has(idKey)) continue;
+        if (titleKey && seenTitles.has(titleKey)) continue;
+        if (idKey) seenIds.add(idKey);
+        if (titleKey) seenTitles.add(titleKey);
+        unique.push(item);
+      }
+      setCareers(unique);
+      setCareersLoading(false);
+    }
+
+    if (goal) {
+      api.recommendCareers({ goal })
+        .then((recRes) => {
+          if (!active) return;
+          const recData = unwrapObject(recRes);
+          let items = [];
+          if (recData && Array.isArray(recData.results) && recData.results.length > 0) {
+            items = recData.results.slice(0, 3).map(normalizeCareer);
+          }
+          if (items.length > 0) {
+            dedupeAndSet(items);
+            return;
+          }
+          return api.careers({ search: goal, limit: 3 }).then((cRes) => {
+            if (!active) return;
+            const cItems = unwrapList(cRes).map(normalizeCareer);
+            if (cItems.length > 0) {
+              dedupeAndSet(cItems);
+            } else {
+              return api.careers({ limit: 3 }).then((fallbackRes) => {
+                if (!active) return;
+                dedupeAndSet(unwrapList(fallbackRes));
+              });
+            }
+          });
+        })
+        .catch(() => {
+          if (!active) return;
+          api.careers({ limit: 3 })
+            .then((cRes) => {
+              if (!active) return;
+              dedupeAndSet(unwrapList(cRes));
+            })
+            .catch((err) => {
+              if (!active) return;
+              setCareersError(err.message || "Failed to load careers.");
+              setCareersLoading(false);
+            });
+        });
+    } else {
+      api.careers({ limit: 3 })
+        .then((cRes) => {
+          if (!active) return;
+          dedupeAndSet(unwrapList(cRes));
+        })
+        .catch((err) => {
+          if (!active) return;
+          setCareersError(err.message || "Failed to load careers.");
+          setCareersLoading(false);
+        });
+    }
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    setProfileLoading(true);
+
+    api.profile()
+      .then((profileRes) => {
+        if (!active) return;
+        const p = unwrapObject(profileRes);
+        if (p.profile_status !== "complete") {
+          navigate("/onboarding", { replace: true });
+          return;
+        }
+        setProfile(p);
+        setProfileLoading(false);
+
+        const cg = p.current_goal;
+        const goal = (cg && typeof cg === "object" && cg.title)
+          ? cg.title
+          : (typeof cg === "string" && cg.trim() ? cg.trim() : (p.career_goal?.trim() || null));
+
+        loadPathway();
+        loadCareers(goal);
+      })
+      .catch(() => {
+        if (!active) return;
+        setProfile(null);
+        setProfileLoading(false);
+        loadPathway();
+        loadCareers(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user?.id, navigate, loadPathway, loadCareers]);
+
+  if (profileLoading) {
     return (
       <AppShell>
-        <LoadingState label="Loading your dashboard..." />
+        <LoadingState label="Loading your career intelligence dashboard..." />
       </AppShell>
     );
+  }
 
-  const goalText = profile?.career_goal;
+  const firstName = getFirstName(user);
 
   return (
     <AppShell>
-      <div className="dashboard">
-        <div className="page-heading-row">
-          <div>
-            <div className="section-kicker">DASHBOARD</div>
-            <h1>
-              Hello{" "}
-              {(() => {
-                const localName = getLocalName(user?.id);
-                const displayName =
-                  localName || user?.name || user?.full_name || "";
-                if (displayName) return displayName.trim().split(/\s+/)[0];
-                if (user?.email) {
-                  const prefix = user.email.split("@")[0];
-                  return prefix.charAt(0).toUpperCase() + prefix.slice(1);
-                }
-                return "there";
-              })()}
-            </h1>
-            <p>Here's a quick overview of your career journey.</p>
+      <div className="dash-container">
+        {/* SECTION A: Welcome Header */}
+        <div className="dash-welcome-row">
+          <div className="dash-welcome-text">
+            <div className="dash-kicker">CAREER INTELLIGENCE DASHBOARD</div>
+            <h1>Welcome back, {firstName}</h1>
+            <p>Your next opportunity starts here.</p>
           </div>
-          <button className="btn outline" onClick={() => navigate("/profile")}>
+          <button
+            type="button"
+            className="dash-edit-profile-btn"
+            onClick={() => navigate("/profile")}
+            aria-label="Edit Profile"
+          >
             <UserRound size={16} /> Edit Profile
           </button>
         </div>
-        {goalText ? (
-          <div className="goal-card">
-            <div>
-              <span className="label">YOUR CURRENT GOAL</span>
-              <h2>{goalText}</h2>
-              <Link to={`/careers?search=${encodeURIComponent(goalText)}`}>
-                Explore matching careers <ArrowRight size={14} />
-              </Link>
+
+        {/* SECTION B: Current Career Goal */}
+        <div className="dash-goal-banner">
+          <div className="dash-goal-left">
+            <span className="dash-kicker-badge">
+              <Target size={13} /> Current Career Goal
+            </span>
+            <div className="dash-goal-title-row">
+              <h2 className="dash-goal-title">
+                {currentGoalTitle || "No career goal set yet"}
+              </h2>
+              {currentGoalTitle && (
+                <span className="dash-goal-pill">Active Target</span>
+              )}
             </div>
+            <p className="dash-goal-subtext">
+              {currentGoalTitle
+                ? "Your compass for customized pathways, skill gap analysis, and verified Goa opportunities."
+                : "Set a career goal in your profile to unlock tailored pathways, skill matching, and targeted opportunities."}
+            </p>
           </div>
-        ) : (
-          <div className="goal-card">
-            <div>
-              <span className="label">YOUR CURRENT GOAL</span>
-              <h2>Not set yet</h2>
-              <Link to="/profile">
+          <div className="dash-goal-actions">
+            {currentGoalTitle ? (
+              <>
+                <Link
+                  to={`/careers?search=${encodeURIComponent(currentGoalTitle)}`}
+                  className="btn outline sm"
+                  style={{ textDecoration: "none" }}
+                >
+                  Explore matching careers <ArrowRight size={14} />
+                </Link>
+                <Link
+                  to="/profile"
+                  style={{
+                    fontSize: 13,
+                    color: "var(--muted, #64748b)",
+                    textDecoration: "none",
+                    fontWeight: 600,
+                  }}
+                >
+                  Change goal
+                </Link>
+              </>
+            ) : (
+              <Link
+                to="/profile"
+                className="btn primary sm"
+                style={{ textDecoration: "none" }}
+              >
                 Set a career goal <ArrowRight size={14} />
               </Link>
-            </div>
-          </div>
-        )}
-        <div className="section-title">
-          <h2>Quick actions</h2>
-        </div>
-        <div className="quick-grid">
-          <ActionCard
-            icon={Compass}
-            title="Explore Careers"
-            text="Find careers based on your profile."
-            to="/careers"
-          />
-          <ActionCard
-            icon={RouteIcon}
-            title="Continue Learning Plan"
-            text="See your next steps."
-            to="/pathway"
-          />
-          <ActionCard
-            icon={BriefcaseBusiness}
-            title="Find Opportunities"
-            text="Jobs, exams and training programmes."
-            to="/opportunities"
-          />
-        </div>
-        <div className="two-col">
-          <div className="panel">
-            <div className="panel-head">
-              <div>
-                <span className="label">YOUR PATHWAY</span>
-                <h2>{pathwaySummary?.careerTitle ?? "No pathway yet"}</h2>
-                {pathwaySummary?.title && <p style={{margin: '4px 0 16px 0', fontSize: '14px', color: 'var(--muted)'}}>{pathwaySummary.title}</p>}
-                {pathwaySummary?.steps && pathwaySummary.steps.length > 0 && (() => {
-                  const completed = pathwaySummary.steps.filter(s => s.status === 'completed').length;
-                  const total = pathwaySummary.steps.length;
-                  const pct = total ? Math.round((completed / total) * 100) : 0;
-                  return (
-                    <div style={{marginBottom: 16}}>
-                      <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: 4}}>
-                        <span>{completed} of {total} steps completed</span>
-                        <span>{pct}%</span>
-                      </div>
-                      <div style={{height: 6, background: 'var(--line)', borderRadius: 3, overflow: 'hidden'}}>
-                        <div style={{height: '100%', background: 'var(--brand)', width: `${pct}%`, transition: 'width 0.3s ease'}}></div>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-              <Link to="/pathway">View all</Link>
-            </div>
-            {pathwaySummary?.steps?.length ? (
-              <div className="mini-path">
-                {pathwaySummary.steps.slice(0, 4).map((s, i) => (
-                  <div
-                    className={`mini-step ${(s.status ?? "not_started").toLowerCase()}`}
-                    key={s.id ?? i}
-                  >
-                    <div className="mini-dot">
-                      {s.status === "completed" ? <Check size={13} /> : i + 1}
-                    </div>
-                    <div>
-                      <b>{s.title}</b>
-                      <span>{s.description}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="muted">
-                Generate a pathway from a career guide to see it here.
-              </p>
             )}
           </div>
-          <div className="panel">
-            <div className="panel-head">
-              <div>
-                <span className="label">EXPLORE CAREERS</span>
-                <h2>Careers to explore</h2>
+        </div>
+
+        {/* SECTION C: Quick Actions */}
+        <div>
+          <div className="section-title" style={{ marginBottom: 12 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", margin: 0 }}>
+              Quick actions
+            </h2>
+          </div>
+          <div className="dash-quick-grid">
+            <Link className="dash-quick-action" to="/careers">
+              <div className="dash-quick-icon-wrap">
+                <Compass size={20} />
               </div>
-              <Link to="/careers">See all</Link>
+              <div className="dash-quick-info">
+                <b>Explore Careers</b>
+                <span>Discover in-demand careers and qualifications in Goa.</span>
+              </div>
+              <ArrowRight size={16} color="#94a3b8" style={{ marginLeft: "auto", flexShrink: 0 }} />
+            </Link>
+
+            <Link className="dash-quick-action" to="/pathway">
+              <div className="dash-quick-icon-wrap">
+                <RouteIcon size={20} />
+              </div>
+              <div className="dash-quick-info">
+                <b>Continue Learning Pathway</b>
+                <span>Follow structured milestones and skill roadmaps.</span>
+              </div>
+              <ArrowRight size={16} color="#94a3b8" style={{ marginLeft: "auto", flexShrink: 0 }} />
+            </Link>
+
+            <Link className="dash-quick-action" to="/opportunities">
+              <div className="dash-quick-icon-wrap">
+                <BriefcaseBusiness size={20} />
+              </div>
+              <div className="dash-quick-info">
+                <b>Find Opportunities</b>
+                <span>Verified jobs, internships, scholarships & exams.</span>
+              </div>
+              <ArrowRight size={16} color="#94a3b8" style={{ marginLeft: "auto", flexShrink: 0 }} />
+            </Link>
+          </div>
+        </div>
+
+        {/* SECTION D: Opportunities — Explore Opportunities */}
+        <div className="dash-section-card dash-explore-opps-card">
+          <div className="dash-explore-opps-header">
+            <div className="dash-explore-opps-header-text">
+              <div className="dash-kicker">GOA CAREER OPPORTUNITIES</div>
+              <h2>Explore Opportunities</h2>
+              <p>
+                Discover jobs, internships, scholarships, government recruitment, examinations, and training programmes across Goa. Explore opportunities from government departments, private employers, and educational institutions to find your next step.
+              </p>
             </div>
-            <div className="rec-list">
-              {careers.map((c) => (
-                <Link className="rec-item" to={`/careers/${c.id}`} key={c.id}>
-                  <div className="career-thumb">
-                    <BriefcaseBusiness size={17} />
+          </div>
+
+          <div className="dash-explore-categories-wrap">
+            <span className="dash-explore-category-pill">
+              <BriefcaseBusiness size={14} /> Jobs
+            </span>
+            <span className="dash-explore-category-pill">
+              <GraduationCap size={14} /> Internships
+            </span>
+            <span className="dash-explore-category-pill">
+              <Building2 size={14} /> Government Recruitment
+            </span>
+            <span className="dash-explore-category-pill">
+              <Award size={14} /> Scholarships
+            </span>
+            <span className="dash-explore-category-pill">
+              <BookOpen size={14} /> Training Programmes
+            </span>
+          </div>
+
+          <div className="dash-explore-opps-footer">
+            <Link
+              to="/opportunities"
+              className="btn primary sm"
+              style={{
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 22px",
+                fontWeight: 700,
+                fontSize: 14,
+              }}
+            >
+              Explore Opportunities <ArrowRight size={15} />
+            </Link>
+            <Link
+              to="/opportunities"
+              className="dash-header-action-link"
+              style={{ fontSize: 13, fontWeight: 600 }}
+            >
+              View all opportunities <ArrowRight size={14} />
+            </Link>
+          </div>
+        </div>
+
+        {/* SECTION E: Your Career Pathway (BELOW Opportunities) */}
+        <div className="dash-section-card">
+          <div className="dash-section-header">
+            <div className="dash-section-header-text">
+              <div className="dash-kicker">YOUR CAREER PATHWAY</div>
+              <h2>
+                {pathwaySummary?.careerTitle
+                  ? `${pathwaySummary.careerTitle} Pathway`
+                  : "Your Learning Pathway"}
+              </h2>
+              <p>
+                {pathwaySummary?.title ||
+                  "Step-by-step milestones, verified qualifications, and skill acquisition."}
+              </p>
+            </div>
+            <Link to="/pathway" className="dash-header-action-link">
+              View full pathway <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          {pathwayLoading && (
+            <LoadingState label="Loading pathway progress..." />
+          )}
+
+          {!pathwayLoading && pathwayError && (
+            <div className="dash-error-box">
+              <p>
+                <AlertCircle size={16} style={{ verticalAlign: "middle", marginRight: 6 }} />
+                {pathwayError}
+              </p>
+              <button
+                type="button"
+                className="dash-retry-btn"
+                onClick={loadPathway}
+              >
+                <RotateCcw size={13} /> Retry
+              </button>
+            </div>
+          )}
+
+          {!pathwayLoading && !pathwayError && pathwaySummary && (
+            <div className="dash-pathway-content">
+              <div className="dash-pathway-meta-row">
+                <span>
+                  {pathwaySummary.completed} of {pathwaySummary.total} milestones completed
+                </span>
+                <span>{pathwaySummary.pct}% Overall Progress</span>
+              </div>
+              <div className="dash-pathway-progress-track">
+                <div
+                  className="dash-pathway-progress-bar"
+                  style={{ width: `${pathwaySummary.pct}%` }}
+                />
+              </div>
+
+              {pathwaySummary.steps && pathwaySummary.steps.length > 0 && (
+                <div className="dash-pathway-steps-preview">
+                  {pathwaySummary.steps.slice(0, 4).map((s, idx) => (
+                    <div
+                      className={`dash-pathway-step-card ${s.status === "completed" ? "completed" : ""}`}
+                      key={s.id ? `dash-step-${s.id}` : `dash-step-${s.step_number ?? idx}-${idx}`}
+                    >
+                      <div className="dash-pathway-step-dot">
+                        {s.status === "completed" ? <Check size={13} /> : idx + 1}
+                      </div>
+                      <div className="dash-pathway-step-info">
+                        <b>{s.title}</b>
+                        <span>
+                          {s.description || (s.status === "completed" ? "Completed milestone" : "Milestone roadmap")}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="dash-pathway-actions">
+                <Link to="/pathway" className="btn primary sm" style={{ textDecoration: "none" }}>
+                  Continue Pathway <ArrowRight size={14} />
+                </Link>
+                <Link to="/pathway" className="btn outline sm" style={{ textDecoration: "none" }}>
+                  Review All Milestones
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {!pathwayLoading && !pathwayError && !pathwaySummary && (
+            <div className="dash-state-box">
+              <RouteIcon size={28} color="#64748b" />
+              <h3>No active learning pathway yet</h3>
+              <p>
+                Choose your target career guide to generate a structured, step-by-step career pathway tailored to your background.
+              </p>
+              <Link to="/careers" className="btn primary sm" style={{ marginTop: 6, textDecoration: "none" }}>
+                Create or select pathway <ArrowRight size={14} />
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* SECTION F: Explore Careers (BELOW Pathway) */}
+        <div className="dash-section-card">
+          <div className="dash-section-header">
+            <div className="dash-section-header-text">
+              <div className="dash-kicker">EXPLORE CAREERS</div>
+              <h2>
+                {currentGoalTitle
+                  ? `Careers Related to ${currentGoalTitle}`
+                  : "Careers to Explore"}
+              </h2>
+              <p>Curated career guides and requirements in Goa.</p>
+            </div>
+            <Link to="/careers" className="dash-header-action-link">
+              See all careers <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          {careersLoading && (
+            <LoadingState label="Loading career recommendations..." />
+          )}
+
+          {!careersLoading && careersError && (
+            <div className="dash-error-box">
+              <p>
+                <AlertCircle size={16} style={{ verticalAlign: "middle", marginRight: 6 }} />
+                {careersError}
+              </p>
+              <button
+                type="button"
+                className="dash-retry-btn"
+                onClick={() => loadCareers(currentGoalTitle)}
+              >
+                <RotateCcw size={13} /> Retry
+              </button>
+            </div>
+          )}
+
+          {!careersLoading && !careersError && careers.length > 0 && (
+            <div className="dash-careers-grid">
+              {careers.map((c, idx) => (
+                <Link
+                  className="dash-career-card"
+                  to={`/careers/${c.id}`}
+                  key={c.id ? `dash-career-${c.id}` : `dash-career-${idx}-${encodeURIComponent(c.title || 'item')}`}
+                >
+                  <div className="dash-career-thumb">
+                    <BriefcaseBusiness size={20} />
                   </div>
-                  <div>
+                  <div className="dash-career-body">
                     <b>{c.title}</b>
                     <span>
-                      {c.description?.slice(0, 60) || "View career guide"}
+                      {c.description
+                        ? (c.description.length > 95
+                            ? c.description.slice(0, 95) + "..."
+                            : c.description)
+                        : "View official career guide, prerequisites and pathways."}
                     </span>
                   </div>
-                  <ArrowRight size={16} />
+                  <ArrowRight size={16} color="#94a3b8" style={{ alignSelf: "center", flexShrink: 0 }} />
                 </Link>
               ))}
             </div>
-          </div>
+          )}
+
+          {!careersLoading && !careersError && careers.length === 0 && (
+            <div className="dash-state-box">
+              <Compass size={28} color="#64748b" />
+              <h3>No career recommendations found</h3>
+              <p>Browse our complete Goa career catalogue to find guides that match your goals.</p>
+              <Link to="/careers" className="btn outline sm" style={{ marginTop: 6 }}>
+                Browse all careers
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </AppShell>
@@ -2522,6 +3352,10 @@ function normalizeRecommendationResult(r) {
     reasoning: r.reasoning ?? r.explanation ?? r.why ?? "",
     matchScore: r.match_score ?? r.matchScore ?? r.score ?? null,
     missingSkills: r.missing_skills ?? r.skill_gaps ?? r.gaps ?? [],
+    matchedSkills: r.matched_skills ?? r.matchedSkills ?? [],
+    matchType: r.match_type ?? r.matchType ?? 'related',
+    source: r.source ?? 'database',
+    verified: r.verified ?? true,
   };
 }
 
@@ -2536,7 +3370,8 @@ function Careers() {
   const [error, setError] = useState(null);
 
   const [recommending, setRecommending] = useState(false);
-  const [recommendation, setRecommendation] = useState(null); // { id, results }
+  const [recommendation, setRecommendation] = useState(null); // { id, goal, results, groups, ... }
+  const [recFilter, setRecFilter] = useState("all"); // "all" | "direct" | "related" | "pathway"
   const [recError, setRecError] = useState(null);
   const [feedbackGiven, setFeedbackGiven] = useState({});
 
@@ -2594,11 +3429,16 @@ function Careers() {
             }
           } catch (err) {
             if (!active || signal.aborted) return;
-            if (err?.code === 'AI_UNAVAILABLE' || err?.status === 503) {
-              setError(new Error("AI generation is currently unavailable. No careers found."));
-            } else {
-              setError(err);
-            }
+            const normalizedErr = new Error(
+              err?.status === 400
+                ? (err.message || "Invalid search input. Please try a valid career title or skill keyword.")
+                : (err?.code === 'AI_UNAVAILABLE' || err?.status === 503)
+                ? "AI career exploration is currently unavailable. Please try again or search existing catalogue careers."
+                : (err?.message || "Temporary server error while exploring careers. Please try again.")
+            );
+            normalizedErr.status = err?.status || (err?.code === 'AI_UNAVAILABLE' ? 503 : 500);
+            normalizedErr.code = err?.code || 'UNKNOWN';
+            setError(normalizedErr);
             setStatus("error");
           }
         } else {
@@ -2608,7 +3448,10 @@ function Careers() {
       })
       .catch((err) => {
         if (!active || signal.aborted || err.code === 'CANCELLED') return;
-        setError(err);
+        const normalizedErr = new Error(err?.message || "Unable to load careers. Please try again.");
+        normalizedErr.status = err?.status || 500;
+        normalizedErr.code = err?.code || 'UNKNOWN';
+        setError(normalizedErr);
         setStatus("error");
       });
     return () => {
@@ -2649,16 +3492,37 @@ function Careers() {
     setRecommending(true);
     setRecError(null);
     try {
-      const res = await api.recommendCareers({});
+      let resolvedGoal = null;
+      try {
+        const profRes = await api.profile();
+        const prof = unwrapObject(profRes);
+        resolvedGoal = prof.current_goal?.title || prof.career_goal || null;
+      } catch {
+        /* fallback to backend auth context resolution */
+      }
+
+      const res = await api.recommendCareers(resolvedGoal ? { goal: resolvedGoal } : {});
       const data = unwrapObject(res);
       const rawResults =
         data.results || data.recommendations || data.data || [];
+      const normalizedResults = Array.isArray(rawResults)
+        ? rawResults.map(normalizeRecommendationResult)
+        : [];
+
       setRecommendation({
         id: data.recommendation_id || data.id,
-        results: Array.isArray(rawResults)
-          ? rawResults.map(normalizeRecommendationResult)
-          : [],
+        goal: data.goal || resolvedGoal || null,
+        results: normalizedResults,
+        groups: data.groups ? {
+          direct_matches: (data.groups.direct_matches || []).map(normalizeRecommendationResult),
+          related_careers: (data.groups.related_careers || []).map(normalizeRecommendationResult),
+          career_transitions: (data.groups.career_transitions || []).map(normalizeRecommendationResult),
+          alternative_pathways: (data.groups.alternative_pathways || []).map(normalizeRecommendationResult),
+        } : null,
+        aiGenerated: Boolean(data.ai_generated),
+        fallbackUsed: Boolean(data.fallback_used),
       });
+      setRecFilter("all");
     } catch (err) {
       setRecError(err);
     } finally {
@@ -2675,6 +3539,19 @@ function Careers() {
       /* non-critical - feedback failing shouldn't block the page */
     }
   }
+
+  const directMatches = recommendation?.groups?.direct_matches || (recommendation?.results || []).filter(r => r.matchType === 'direct');
+  const relatedMatches = recommendation?.groups?.related_careers || (recommendation?.results || []).filter(r => r.matchType === 'related');
+  const transitionMatches = recommendation?.groups?.career_transitions || (recommendation?.results || []).filter(r => r.matchType === 'transition');
+  const pathwayMatches = recommendation?.groups?.alternative_pathways || (recommendation?.results || []).filter(r => r.matchType === 'pathway' || r.matchType === 'general');
+
+  const visibleResults = recommendation?.results ? (
+    recFilter === 'direct' ? directMatches :
+    recFilter === 'related' ? relatedMatches :
+    recFilter === 'transition' ? transitionMatches :
+    recFilter === 'pathway' ? pathwayMatches :
+    recommendation.results
+  ) : [];
 
   return (
     <AppShell>
@@ -2720,12 +3597,25 @@ function Careers() {
         )}
         {recommendation && !hasActiveSearch && (
           <div style={{ marginBottom: 24, padding: '24px 28px', background: '#fff', borderRadius: 16, border: '1px solid var(--line)', boxShadow: '0 4px 20px rgba(30,42,62,0.03)', position: 'relative', animation: 'fade-in 0.3s ease-out' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--blue)', letterSpacing: '0.08em', marginBottom: 6 }}>RECOMMENDED FOR YOU</div>
-                <h2 style={{ fontSize: 22, margin: '0 0 6px 0', letterSpacing: '-0.02em' }}>Based on your profile</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--blue)', letterSpacing: '0.08em' }}>GOAL-CENTERED CAREER INTELLIGENCE</span>
+                  {recommendation.fallbackUsed ? (
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 10, background: '#f1f5f9', color: '#475569', fontWeight: 600 }}>
+                      Verified Database Engine
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 10, background: '#eff6ff', color: '#2563eb', fontWeight: 600 }}>
+                      AI-Enriched Analysis
+                    </span>
+                  )}
+                </div>
+                <h2 style={{ fontSize: 22, margin: '0 0 6px 0', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  Centered on: <span style={{ color: 'var(--blue)' }}>{recommendation.goal || 'Your Target Ambition'}</span>
+                </h2>
                 <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
-                  Career paths matched to your skills, goals, education and preferences.
+                  Prioritized by your primary career goal, technical skill overlaps, and educational compatibility.
                 </p>
               </div>
 
@@ -2756,49 +3646,219 @@ function Careers() {
               )}
             </div>
 
+            {/* Category Filter Strip */}
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 12, marginBottom: 16, borderBottom: '1px solid #f1f5f9' }}>
+              <button
+                type="button"
+                onClick={() => setRecFilter('all')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 20,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  border: recFilter === 'all' ? '1px solid var(--blue)' : '1px solid #e2e8f0',
+                  background: recFilter === 'all' ? '#eff6ff' : '#f8fafc',
+                  color: recFilter === 'all' ? 'var(--blue)' : '#475569',
+                  transition: 'all 0.15s'
+                }}
+              >
+                All Recommendations ({recommendation.results.length})
+              </button>
+              {directMatches.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setRecFilter('direct')}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    border: recFilter === 'direct' ? '1px solid #2563eb' : '1px solid #e2e8f0',
+                    background: recFilter === 'direct' ? '#eff6ff' : '#f8fafc',
+                    color: recFilter === 'direct' ? '#1d4ed8' : '#475569',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  Direct Goal Matches ({directMatches.length})
+                </button>
+              )}
+              {relatedMatches.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setRecFilter('related')}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    border: recFilter === 'related' ? '1px solid #475569' : '1px solid #e2e8f0',
+                    background: recFilter === 'related' ? '#f1f5f9' : '#f8fafc',
+                    color: recFilter === 'related' ? '#0f172a' : '#475569',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  Related Careers ({relatedMatches.length})
+                </button>
+              )}
+              {transitionMatches.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setRecFilter('transition')}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    border: recFilter === 'transition' ? '1px solid #7c3aed' : '1px solid #e2e8f0',
+                    background: recFilter === 'transition' ? '#f5f3ff' : '#f8fafc',
+                    color: recFilter === 'transition' ? '#6d28d9' : '#475569',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  Career Transitions ({transitionMatches.length})
+                </button>
+              )}
+              {pathwayMatches.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setRecFilter('pathway')}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    border: recFilter === 'pathway' ? '1px solid #059669' : '1px solid #e2e8f0',
+                    background: recFilter === 'pathway' ? '#ecfdf5' : '#f8fafc',
+                    color: recFilter === 'pathway' ? '#065f46' : '#475569',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  Alternative Pathways ({pathwayMatches.length})
+                </button>
+              )}
+            </div>
+
             <div style={{ display: 'grid', gap: 12 }}>
-              {recommendation.results.length ? (
-                recommendation.results.map((r, i) => (
-                  <div key={r.careerId ?? i} style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 16, padding: 18, border: '1px solid #eef1f6', borderRadius: 12, background: '#fafbfc', transition: 'transform 0.15s, box-shadow 0.15s' }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(30,42,62,0.06)'; e.currentTarget.style.borderColor = '#dce4f2'; }} onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#eef1f6'; }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 10, background: '#eef4ff', color: 'var(--blue)', display: 'grid', placeItems: 'center', flex: 'none' }}>
+              {visibleResults.length ? (
+                visibleResults.map((r, i) => (
+                  <div
+                    key={r.careerId ?? r.aiCareerId ?? i}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      flexWrap: 'wrap',
+                      gap: 16,
+                      padding: 18,
+                      border: r.matchType === 'direct' ? '1.5px solid #bfdbfe' : '1px solid #eef1f6',
+                      borderRadius: 12,
+                      background: r.matchType === 'direct' ? '#f8faff' : '#fafbfc',
+                      transition: 'transform 0.15s, box-shadow 0.15s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(30,42,62,0.06)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+                  >
+                    <div style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 10,
+                      background: r.matchType === 'direct' ? '#dbeafe' : (r.matchType === 'transition' ? '#f5f3ff' : (r.matchType === 'pathway' ? '#d1fae5' : '#eef4ff')),
+                      color: r.matchType === 'direct' ? '#1d4ed8' : (r.matchType === 'transition' ? '#6d28d9' : (r.matchType === 'pathway' ? '#047857' : 'var(--blue)')),
+                      display: 'grid',
+                      placeItems: 'center',
+                      flex: 'none'
+                    }}>
                       <Sparkles size={20} />
                     </div>
-                    <div style={{ flex: 1, minWidth: 200 }}>
-                      <h3 style={{ fontSize: 15, margin: '0 0 5px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {r.title}
-                        {!r.careerId && r.source === 'ai_general' && (
-                          <span style={{ fontSize: 10, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', background: '#edf4ff', color: 'var(--blue)', borderRadius: 12, fontWeight: 600 }}>
-                            <Sparkles size={10} /> AI suggestion
+                    <div style={{ flex: 1, minWidth: 220 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                        <h3 style={{ fontSize: 16, margin: 0, fontWeight: 700, color: '#0f172a' }}>
+                          {r.title}
+                        </h3>
+                        {r.matchType === 'direct' && (
+                          <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, background: '#dbeafe', color: '#1e40af', fontWeight: 700 }}>
+                            🎯 Direct Match
                           </span>
                         )}
-                      </h3>
-                      {r.reasoning && <p style={{ margin: 0, fontSize: 12, color: '#475467', lineHeight: 1.5 }}>{r.reasoning}</p>}
-                      {r.missingSkills?.length > 0 && (
-                        <p style={{ margin: '7px 0 0 0', fontSize: 11, color: '#6b7280' }}>
-                          <span style={{ fontWeight: 600 }}>Missing skills:</span> {r.missingSkills.map((s) => s.skill ?? s.name ?? s).join(", ")}
+                        {r.matchType === 'related' && (
+                          <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, background: '#f1f5f9', color: '#334155', fontWeight: 600 }}>
+                            🔗 Related Career
+                          </span>
+                        )}
+                        {r.matchType === 'transition' && (
+                          <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, background: '#f5f3ff', color: '#6d28d9', fontWeight: 600, border: '1px solid #ddd6fe' }}>
+                            🔄 Career Transition
+                          </span>
+                        )}
+                        {r.matchType === 'pathway' && (
+                          <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, background: '#ecfdf5', color: '#047857', fontWeight: 600 }}>
+                            🌱 Alternative Pathway
+                          </span>
+                        )}
+                        {r.source === 'ai_general' && (
+                          <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, background: '#faf5ff', color: '#7e22ce', fontWeight: 600, border: '1px solid #e9d5ff' }}>
+                            ✨ AI Exploration
+                          </span>
+                        )}
+                        {r.matchScore != null && (
+                          <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, background: '#f8fafc', color: '#0f172a', fontWeight: 700, border: '1px solid #e2e8f0', marginLeft: 'auto' }}>
+                            {r.matchScore}% Match
+                          </span>
+                        )}
+                      </div>
+                      {r.reasoning && (
+                        <p style={{ margin: '0 0 8px 0', fontSize: 13, color: '#334155', lineHeight: 1.5 }}>
+                          {r.reasoning}
                         </p>
                       )}
+
+                      {/* Matched & Missing Skills Chips */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {r.matchedSkills && r.matchedSkills.length > 0 && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 11 }}>
+                            <span style={{ fontWeight: 600, color: '#047857' }}>Your matching skills:</span>
+                            {r.matchedSkills.slice(0, 5).map((s, idx) => (
+                              <span key={idx} style={{ padding: '2px 7px', background: '#ecfdf5', color: '#065f46', borderRadius: 6, border: '1px solid #a7f3d0' }}>
+                                ✓ {typeof s === 'object' ? s.name : s}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {r.missingSkills && r.missingSkills.length > 0 && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 11 }}>
+                            <span style={{ fontWeight: 600, color: '#64748b' }}>Skills to build:</span>
+                            {r.missingSkills.slice(0, 5).map((s, idx) => (
+                              <span key={idx} style={{ padding: '2px 7px', background: '#f8fafc', color: '#475569', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                                + {typeof s === 'object' ? s.name || s.skill : s}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     {r.careerId ? (
                       <Link className="btn outline small" to={`/careers/${r.careerId}`} style={{ flex: 'none', background: '#fff' }}>
-                        View <ArrowRight size={14} />
+                        View Career <ArrowRight size={14} />
                       </Link>
                     ) : r.aiCareerId ? (
                       <Link className="btn outline small" to={`/careers/${r.aiCareerId}?type=ai_profile`} style={{ flex: 'none', background: '#fff' }}>
-                        View <ArrowRight size={14} />
+                        View Career <ArrowRight size={14} />
                       </Link>
                     ) : (
                       <Link className="btn outline small" to={`/careers/rec_${recommendation.id}_${encodeURIComponent(r.title)}`} style={{ flex: 'none', background: '#fff' }}>
-                        View <ArrowRight size={14} />
+                        View Career <ArrowRight size={14} />
                       </Link>
                     )}
                   </div>
                 ))
               ) : (
                 <div style={{ padding: '32px 20px', textAlign: 'center', background: '#f8fafc', borderRadius: 12, border: '1px dashed #dce2eb' }}>
-                  <p style={{ margin: '0 0 8px 0', fontWeight: 600, color: '#1e293b' }}>Your personalized recommendations are not available yet.</p>
-                  <p style={{ margin: '0 0 20px 0', fontSize: 13, color: 'var(--muted)' }}>Complete or update your profile to help us find career paths that match your goals and skills.</p>
-                  <Link to="/profile" className="btn outline">Update profile</Link>
+                  <p style={{ margin: '0 0 8px 0', fontWeight: 600, color: '#1e293b' }}>No careers found under this filter.</p>
+                  <button type="button" onClick={() => setRecFilter('all')} className="btn outline small">Show all recommendations</button>
                 </div>
               )}
             </div>
@@ -2839,7 +3899,7 @@ function Careers() {
               <ErrorState
                 text={error?.message}
                 status={error?.status}
-                onRetry={() => load(query, page)}
+                onRetry={() => load(query || searchParams.get("search") || "", 1)}
               />
             )}
             {(status === "ready" || status === "loading_more") && careers.length > 0 && careers.map((c) => <CareerRow c={c} key={c.id} />)}
@@ -2907,482 +3967,9 @@ function EmptyState({ title, text, action, onAction }) {
 
 function CareerDetail() {
   const { user } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const params = useParams();
-  const id =
-    params.id || location.pathname.split("/").filter(Boolean).pop() || "";
-  const searchParams = new URLSearchParams(location.search);
-  const type = searchParams.get("type");
-  const [c, setC] = useState(null);
-  const [status, setStatus] = useState("loading");
-  const [error, setError] = useState(null);
-  const [tab, setTab] = useState("overview");
-  const [tabData, setTabData] = useState({});
-  const [tabStatus, setTabStatus] = useState("idle");
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    if (!user || !id) return;
-    const key = `careergps_saved_careers_${user.id}`;
-    try {
-      const savedIds = JSON.parse(localStorage.getItem(key) || "[]");
-      setSaved(savedIds.includes(id));
-    } catch { }
-  }, [id, user]);
-
-  function toggleSave() {
-    if (!user) {
-      alert("Please log in to save careers.");
-      return;
-    }
-    const key = `careergps_saved_careers_${user.id}`;
-    let savedIds = [];
-    try {
-      savedIds = JSON.parse(localStorage.getItem(key) || "[]");
-    } catch { }
-    let nextIds;
-    if (saved) {
-      nextIds = savedIds.filter((savedId) => savedId !== id);
-    } else {
-      nextIds = Array.from(new Set([...savedIds, id]));
-    }
-    localStorage.setItem(key, JSON.stringify(nextIds));
-    setSaved(!saved);
-  }
-
-  useEffect(() => {
-    let active = true;
-    setStatus("loading");
-    let fetcher;
-    if (id.startsWith("rec_")) {
-      const parts = id.split("_");
-      const recId = parts[1];
-      const title = decodeURIComponent(parts.slice(2).join("_"));
-
-      fetcher = api.exploreCareer({ query: title }).then(explored => {
-        const res = unwrapObject(explored);
-        const realId = res.ai_career_id || res.id;
-        if (realId) {
-          const realType = res.ai_career_id ? 'ai_profile' : 'catalogue';
-          if (active) {
-            navigate(`/careers/${realId}?type=${realType}`, { replace: true });
-            return new Promise(() => { }); // never resolves, component unmounts
-          }
-        }
-        throw { status: 404, message: "Could not generate AI career profile." };
-      }).catch((err) => {
-        console.error("Explore failed, falling back to dummy recommendation", err);
-        return api.recommendation(recId).then(data => {
-          const rec = unwrapObject(data);
-          const item = rec.results.find(x => x.title === title);
-          if (!item) throw { status: 404, message: "Recommendation not found" };
-          return {
-            data: {
-              id,
-              title: item.title,
-              description: item.reasoning,
-              responsibilities: [],
-              qualifications: [],
-              entry_routes: [],
-              skills: item.missingSkills ? item.missingSkills.map(s => ({
-                name: s.skill || s.name || s,
-                importance: 'recommended'
-              })) : [],
-              origin: 'ai_generated',
-              verification_status: 'unverified'
-            }
-          };
-        });
-      });
-    } else {
-      fetcher = type === 'ai_profile' ? api.aiCareer(id) : api.career(id);
-    }
-
-    fetcher
-      .then((data) => {
-        if (!active) return;
-        setC(normalizeCareer(unwrapObject(data)));
-        setStatus("ready");
-      })
-      .catch((err) => {
-        if (!active) return;
-        setError(err);
-        setStatus(err.status === 404 ? "notfound" : "error");
-      });
-    return () => {
-      active = false;
-    };
-  }, [id]);
-
-  const TABS = [
-    { key: "overview", label: "Overview" },
-    { key: "skills", label: "Skills" },
-    { key: "pathways", label: "Career Path" },
-    { key: "courses", label: "Courses" },
-    { key: "opportunities", label: "Opportunities" },
-  ];
-
-  useEffect(() => {
-    if (tab === "overview" || tabData[tab] || !id) return;
-    let active = true;
-    setTabStatus("loading");
-
-    if (id.startsWith("rec_")) {
-      if (tab === "skills" && c?.skills) {
-        setTabData((d) => ({ ...d, [tab]: c.skills }));
-      } else {
-        setTabData((d) => ({ ...d, [tab]: [] }));
-      }
-      setTabStatus("ready");
-      return;
-    }
-
-
-    const fetchers = {
-      skills: () => api.careerSkills(id),
-      pathways: () => api.careerPathways(id),
-      courses: () => api.careerCourses(id),
-      opportunities: () => api.careerOpportunities(id),
-    };
-    fetchers[tab]()
-      .then((res) => {
-        if (!active) return;
-        setTabData((d) => ({ ...d, [tab]: unwrapList(res) }));
-        setTabStatus("ready");
-      })
-      .catch((err) => {
-        if (active) setTabStatus("error");
-      });
-    return () => {
-      active = false;
-    };
-  }, [tab, id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (status === "loading")
-    return (
-      <AppShell>
-        <LoadingState label="Loading career..." />
-      </AppShell>
-    );
-  if (status === "notfound") return <NotFound />;
-  if (status === "error" || !c)
-    return (
-      <AppShell>
-        <ErrorState text={error?.message} status={error?.status} />
-      </AppShell>
-    );
-
   return (
     <AppShell>
-      <div className="detail-page">
-        <Seo
-          title={`${c.title} Career Guide | CareerGPS`}
-          description={`${c.description} Explore skills, qualifications, pathways and related opportunities with CareerGPS.`}
-          path={location.pathname}
-          breadcrumbs={[
-            { name: "Home", path: "/" },
-            { name: "Careers", path: "/careers" },
-            { name: c.title, path: location.pathname },
-          ]}
-        />
-        <div className="breadcrumbs">
-          <Link to="/careers">Careers</Link>
-          <span>/</span>
-          <b>{c.title}</b>
-        </div>
-        <div className="detail-hero">
-          <div className="detail-image">
-            <BriefcaseBusiness size={42} />
-          </div>
-          <div className="detail-title">
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                gap: 12,
-              }}
-            >
-              <h1>{c.title}</h1>
-              <button
-                className="icon-save"
-                onClick={toggleSave}
-                style={{ whiteSpace: "nowrap" }}
-              >
-                {saved ? <BookmarkCheck /> : <Bookmark />}{" "}
-                <span>{saved ? "Saved" : "Save"}</span>
-              </button>
-            </div>
-            <p>{c.description}</p>
-            {c.origin === 'ai_generated' && c.disclaimer && (
-              <div className="alert-banner warning" style={{ marginBottom: '16px' }}>
-                <Sparkles size={16} />
-                <span>{c.disclaimer}</span>
-              </div>
-            )}
-            {c.verificationStatus === "verified" && c.origin !== 'ai_generated' ? (
-              <div className="detail-meta">
-                <span>
-                  <ShieldCheck size={15} />
-                  Verified information
-                </span>
-              </div>
-            ) : (
-              <AIBadge origin={c.origin} verificationStatus={c.verificationStatus} />
-            )}
-          </div>
-        </div>
-        <div className="tabs">
-          {TABS.map((t) => (
-            <a
-              key={t.key}
-              className={tab === t.key ? "active" : ""}
-              onClick={() => setTab(t.key)}
-              style={{ cursor: "pointer" }}
-            >
-              {t.label}
-            </a>
-          ))}
-        </div>
-        <div className="detail-grid">
-          <div>
-            {tab === "overview" && (
-              <>
-                <section className="panel detail-panel">
-                  <h2>Key information</h2>
-                  <div className="info-grid">
-                    <Info
-                      label="Typical qualification"
-                      value={c.keyInformation?.typicalQualification || c.qualifications[0]}
-                    />
-                    <Info label="Entry route" value={c.keyInformation?.entryRoute || c.entryRoutes[0]} />
-                  </div>
-                </section>
-                {c.responsibilities.length > 0 && (
-                  <section className="panel detail-panel">
-                    <h2>Typical responsibilities</h2>
-                    <ul className="check-list">
-                      {c.responsibilities.map((r, i) => (
-                        <li key={i}>{r}</li>
-                      ))}
-                    </ul>
-                  </section>
-                )}
-                {c.qualifications.length > 1 && (
-                  <section className="panel detail-panel">
-                    <h2>Qualifications</h2>
-                    <ul className="check-list">
-                      {c.qualifications.map((q, i) => (
-                        <li key={i}>{q}</li>
-                      ))}
-                    </ul>
-                  </section>
-                )}
-              </>
-            )}
-            {tab !== "overview" && tabStatus === "loading" && (
-              <LoadingState label={`Loading ${tab}...`} />
-            )}
-            {tab !== "overview" && tabStatus === "error" && (
-              <ErrorState text="Could not load this section." />
-            )}
-            {tab === "skills" &&
-              tabStatus === "ready" &&
-              ((tabData.skills || []).length ? (
-                <section className="panel detail-panel">
-                  <h2>Key skills</h2>
-                  <div className="tag-row">
-                    {tabData.skills.map((s) => (
-                      <span key={s.id}>
-                        {s.name}
-                        {s.importance === "required" && " *"}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="muted" style={{ marginTop: 10 }}>
-                    * required skill
-                  </p>
-                </section>
-              ) : (
-                <EmptyState
-                  title="No skills listed yet"
-                  text="This career guide doesn't have documented skills yet."
-                />
-              ))}
-            {tab === "pathways" &&
-              tabStatus === "ready" &&
-              (c.origin === 'ai_generated' ? (
-                <div className="listing-page" style={{ padding: 0 }}>
-                  <div className="panel detail-panel">
-                    <h2>AI Pathway Generation</h2>
-                    <p className="muted">Generate a customized, step-by-step pathway for this AI-suggested career.</p>
-                    <Link
-                      className="btn primary"
-                      to={`/pathway?career=${c.id}&title=${encodeURIComponent(c.title)}&type=${c.isAiProfile ? 'ai_profile' : 'catalogue'}&origin=${c.origin}&vstatus=${c.verificationStatus}`}
-                    >
-                      Generate AI Pathway <ArrowRight size={15} />
-                    </Link>
-                  </div>
-                </div>
-              ) : (tabData.pathways || []).length ? (
-                <div className="listing-page" style={{ padding: 0 }}>
-                  {tabData.pathways.map((p) => (
-                    <div className="panel detail-panel" key={p.id}>
-                      <h2>{p.title}</h2>
-                      <p className="muted">{p.description}</p>
-                      {p.verification_status === "verified" ? (
-                        <Link
-                          className="btn primary"
-                          to={`/pathway?career=${c.id}&pathway=${p.id}&title=${encodeURIComponent(c.title)}&type=${c.isAiProfile ? 'ai_profile' : 'catalogue'}&origin=${c.origin}&vstatus=${c.verificationStatus}`}
-                        >
-                          Generate this pathway <ArrowRight size={15} />
-                        </Link>
-                      ) : (
-                        <span
-                          className="muted"
-                          title="This pathway must be verified before it can be personalized."
-                        >
-                          Verification pending
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="listing-page" style={{ padding: 0 }}>
-                  <div className="panel detail-panel" style={{ textAlign: 'center', padding: '40px 20px' }}>
-                    <h2 style={{ marginBottom: '12px' }}>Build your personalized career pathway</h2>
-                    <p className="muted" style={{ marginBottom: '24px', maxWidth: '600px', margin: '0 auto 24px auto' }}>
-                      AI will analyze your education, skills and this career to create two realistic routes.
-                    </p>
-                    <Link
-                      className="btn primary large"
-                      to={`/pathway?career=${c.id}&title=${encodeURIComponent(c.title)}&type=${c.isAiProfile ? 'ai_profile' : 'catalogue'}&origin=${c.origin}&vstatus=${c.verificationStatus}`}
-                    >
-                      Generate 2 AI Pathways <ArrowRight size={15} />
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            {tab === "courses" &&
-              tabStatus === "ready" &&
-              ((tabData.courses || []).length ? (
-                <div className="institution-grid">
-                  {tabData.courses.map((course) => (
-                    <div className="institution-card" key={course.courseId || course.id} style={{ display: 'flex', flexDirection: 'column' }}>
-                      <div className="institution-image">
-                        <GraduationCap size={26} />
-                      </div>
-                      <span className="tag">
-                        {course.level || course.course_type || course.qualification || "Course"}
-                      </span>
-                      <h2>{course.courseName || course.title}</h2>
-                      {course.institutionName && (
-                        <p>
-                          <Building2 size={14} />
-                          {course.institutionName}
-                        </p>
-                      )}
-                      {course.location && (
-                        <p style={{ marginTop: 4 }}>
-                          <MapPin size={14} />
-                          {course.location}
-                        </p>
-                      )}
-                      <span className="muted" style={{ margin: '8px 0 16px 0' }}>
-                        {course.duration || course.duration_text || course.mode || ""}
-                      </span>
-                      <div style={{ flex: 1 }}></div>
-                      {course.institutionId && (
-                        <Link to={`/institutions/${course.institutionId}`} className="btn outline full" style={{ marginBottom: 8 }}>
-                          View institution <ArrowRight size={15} />
-                        </Link>
-                      )}
-                      {course.officialWebsite && (
-                        <a href={course.officialWebsite} target="_blank" rel="noopener noreferrer" className="btn full" style={{ background: 'var(--surface-sunken)', color: 'var(--text-main)', border: '1px solid var(--border)' }}>
-                          Official website <ExternalLink size={15} />
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState
-                  title="No matching study options are currently available."
-                  text="We haven't matched specific local institutions for this career's requirements yet."
-                />
-              ))}
-            {tab === "opportunities" &&
-              tabStatus === "ready" &&
-              ((tabData.opportunities || []).length ? (
-                <div className="opportunity-list">
-                  {tabData.opportunities.map((o) => (
-                    <Link
-                      className="opportunity-card"
-                      to={`/opportunities/${o.id}`}
-                      key={o.id}
-                    >
-                      <div className="opp-logo">
-                        <Building2 />
-                      </div>
-                      <div className="opp-main">
-                        <div className="opp-top">
-                          <span
-                            className={`status-pill ${(o.status || "").toLowerCase()}`}
-                          >
-                            {o.status}
-                          </span>
-                          <span>{o.opportunity_type}</span>
-                        </div>
-                        <h2>{o.title}</h2>
-                        <p>
-                          <Building2 size={14} />
-                          {o.organization} · <MapPin size={14} />
-                          {o.location}
-                        </p>
-                      </div>
-                      <ArrowRight size={18} />
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState
-                  title="No linked opportunities yet"
-                  text="No current opportunity is linked to this career yet."
-                />
-              ))}
-          </div>
-          <aside className="eligibility-card">
-            <div className="eligibility-icon">
-              <ShieldCheck />
-            </div>
-            <h2>Is this career for you?</h2>
-            <p>
-              Compare your saved skills against what this career typically
-              requires.
-            </p>
-            <div className="eligibility-checks">
-              <span>
-                <CheckCircle2 /> Uses your saved skills profile
-              </span>
-              <span>
-                <CheckCircle2 /> Shows matched and missing skills
-              </span>
-            </div>
-            <Link
-              className="btn primary full"
-              to={`/skill-gap?career=${c.id}&title=${encodeURIComponent(c.title)}&type=${c.isAiProfile ? 'ai_profile' : 'catalogue'}&origin=${c.origin}&vstatus=${c.verificationStatus}`}
-            >
-              Check my skill gap <ArrowRight size={16} />
-            </Link>
-            <small>
-              Requirements should always be verified against the current
-              official notice.
-            </small>
-          </aside>
-        </div>
-      </div>
+      <CareerDetailPage user={user} />
     </AppShell>
   );
 }
@@ -3397,156 +3984,10 @@ function Info({ label, value }) {
 }
 
 function SkillGap() {
-  const [params] = useSearchParams();
-  const careerId = params.get("career") || "";
-  const careerTitle = params.get("title") || "this career";
-  const origin = params.get("origin") || "";
-  const type = params.get("type") || "";
-  const vstatus = params.get("vstatus") || "";
-  const [status, setStatus] = useState("idle");
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState(null);
-
-  async function runCheck() {
-    if (!careerId) return;
-    if (!getToken()) {
-      setError({
-        status: 401,
-        message: "Log in to compare your saved skills against a career.",
-      });
-      setStatus("error");
-      return;
-    }
-    setStatus("loading");
-    setError(null);
-    try {
-      if (careerId.startsWith("rec_")) {
-        setError({ status: 400, message: "Skill gap analysis is not available for unverified AI recommendations." });
-        setStatus("error");
-        return;
-      }
-      // POST /skills/gap-analysis body: { target_career_id } - the real
-      // backend capability behind "is this career for you?" (see
-      // src/modules/skills/skill-intelligence.routes.js). There is no
-      // generic career-eligibility endpoint.
-      const res = type === 'ai_profile'
-        ? await api.gapAnalysis({ target_ai_career_id: careerId })
-        : await api.gapAnalysis({ target_career_id: careerId });
-      setResult(unwrapObject(res));
-      setStatus("ready");
-    } catch (err) {
-      setError(err);
-      setStatus("error");
-    }
-  }
-
-  useEffect(() => {
-    runCheck(); /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, [careerId]);
-
+  const { user } = useAuth();
   return (
     <AppShell>
-      <div className="eligibility-page">
-        <div className="breadcrumbs">
-          {careerId ? (
-            <Link to={`/careers/${careerId}`}>← Back to career</Link>
-          ) : (
-            <Link to="/careers">← Back to careers</Link>
-          )}
-        </div>
-        <div className="page-heading-row">
-          <div>
-            <div className="section-kicker">SKILL GAP</div>
-            <h1 style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-              Your skill gap for {careerTitle}
-              {(origin === 'ai_generated' || (vstatus && vstatus !== 'verified')) && (
-                <AIBadge origin={origin} verificationStatus={vstatus} />
-              )}
-            </h1>
-            <p>
-              Comparing the skills saved on your profile with what this career
-              typically needs.
-            </p>
-          </div>
-        </div>
-        <div className="eligibility-layout">
-          <div className="panel">
-            <div className="panel-head">
-              <div>
-                <h2>Matched and missing skills</h2>
-                <p>Based on your saved profile skills</p>
-              </div>
-              <button
-                className="btn outline"
-                onClick={runCheck}
-                disabled={status === "loading" || !careerId}
-              >
-                {status === "loading" ? "Checking..." : "Re-run check"}
-              </button>
-            </div>
-            {!careerId && (
-              <p className="muted">
-                Open this page from a career guide to check your skill gap for
-                that career.
-              </p>
-            )}
-            {status === "error" && (
-              <ErrorState text={error?.message} status={error?.status} />
-            )}
-            {status === "loading" && (
-              <LoadingState label="Comparing your skills..." />
-            )}
-            {status === "ready" && result && (
-              <>
-                {(result.matched_skills || []).map((s, i) => (
-                  <div className="requirement" key={`m-${i}`}>
-                    <div className="req-icon met">
-                      <Check size={15} />
-                    </div>
-                    <div>
-                      <b>{s.skill}</b>
-                      <span>Level: {s.level}</span>
-                    </div>
-                    <em>Matched ({s.importance})</em>
-                  </div>
-                ))}
-                {(result.missing_skills || []).map((s, i) => (
-                  <div className="requirement" key={`x-${i}`}>
-                    <div className="req-icon missing">
-                      <X size={15} />
-                    </div>
-                    <div>
-                      <b>{s.skill}</b>
-                      <span>Not yet on your profile</span>
-                    </div>
-                    <em>Missing ({s.importance})</em>
-                  </div>
-                ))}
-                {!(result.matched_skills || []).length &&
-                  !(result.missing_skills || []).length && (
-                    <p className="muted">
-                      This career doesn't have documented required skills yet.
-                    </p>
-                  )}
-              </>
-            )}
-          </div>
-          <aside className="next-box">
-            <div className="callout">
-              <Lightbulb size={17} />
-              <div>
-                <b>Add skills to your profile</b>
-                <span>
-                  Missing skills shown here can be added from your profile page.
-                </span>
-              </div>
-            </div>
-            <Link className="btn outline full" to="/profile">
-              Update my skills <ArrowRight size={15} />
-            </Link>
-          </aside>
-        </div>
-      </div>
+      <SkillGapPage user={user} />
     </AppShell>
   );
 }
@@ -3727,551 +4168,177 @@ function Eligibility() {
 }
 
 function Pathway() {
-  const navigate = useNavigate();
   const { user } = useAuth();
-  const [params] = useSearchParams();
-  const careerId = params.get("career") || "";
-  const templatePathwayId = params.get("pathway") || "";
-  const careerTitle = params.get("title") || "";
-  const origin = params.get("origin") || "";
-  const type = params.get("type") || "";
-  const vstatus = params.get("vstatus") || "";
-  const [pathway, setPathway] = useState(null);
-  const [existingPathways, setExistingPathways] = useState([]);
-  const [generatedPathways, setGeneratedPathways] = useState(null);
-  const [status, setStatus] = useState("loading");
-  const [error, setError] = useState(null);
-  const [saved, setSaved] = useState(false);
-  const [savingStep, setSavingStep] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    async function load() {
-      setStatus("loading");
-      setError(null);
-      if (!getToken()) {
-        if (active) setStatus("empty");
-        return;
-      }
-      try {
-        // BACKEND GAP: there is no endpoint that lists "all of the current
-        // user's generated pathways" - only generate / fetch-by-id /
-        // update-progress exist (see src/modules/pathways/pathway.routes.js).
-        // The id of the last pathway generated for this career (or overall)
-        // is remembered locally so refreshing this page doesn't silently
-        // lose it or generate a duplicate.
-        if (type === 'ai_profile' && careerId) {
-          if (careerId.startsWith("rec_")) {
-            if (active) setStatus("empty");
-            return;
-          }
-          const res = unwrapObject(await api.aiCareerPathway(careerId));
-          if (!active) return;
-          if (!res || Object.keys(res).length === 0) {
-            setStatus("empty"); return;
-          }
-          const mapped = { ...res };
-          mapped.steps = (res.steps || []).map(s => ({
-            ...s,
-            id: s.order, // Use order as stepId for UI
-            status: (res.progress || []).includes(s.order) ? "completed" : "pending"
-          }));
-          mapped.aiProgressRaw = res.progress || [];
-          setPathway(mapped);
-          setStatus("ready");
-
-          api.myAiCareers().then(saves => {
-            if (!active) return;
-            const savedList = unwrapList(saves);
-            if (savedList.find(c => c.ai_career_id === careerId)) {
-              setSaved(true);
-            }
-          }).catch(() => { });
-          return;
-        }
-
-        if (careerId) {
-          const res = unwrapObject(await api.careerPathwaysList(careerId));
-          if (!active) return;
-
-          if (res.selected) {
-            setPathway(res.selected);
-            setStatus("ready");
-          } else {
-            setExistingPathways(res.existing || []);
-            if (res.aiGenerated && res.aiGenerated.length > 0) {
-              setGeneratedPathways(res.aiGenerated);
-              setStatus("generated_selection");
-            } else {
-              setStatus("pre_generation");
-            }
-          }
-        } else {
-          const activeRes = unwrapList(await api.userPathways());
-          if (!active) return;
-          if (activeRes.length > 0) {
-            const selected = unwrapObject(await api.userPathway(activeRes[0].id));
-            if (!active) return;
-            setPathway(selected);
-            setStatus("ready");
-          } else {
-            setStatus("empty");
-          }
-        }
-      } catch (err) {
-        if (active) {
-          setError(err);
-          setStatus("error");
-        }
-      }
-    }
-    load();
-    return () => {
-      active = false;
-    };
-  }, [careerId, type, user?.id]);
-
-  async function handleGenerate() {
-    setIsGenerating(true);
-    setError(null);
-    try {
-      const body = { career_id: careerId };
-      const res = await api.generatePathway(body);
-      setGeneratedPathways(res.data);
-      setStatus("generated_selection");
-    } catch (err) {
-      setError(err);
-    } finally {
-      setIsGenerating(false);
-    }
-  }
-
-  async function handleSelectPathway(userPathwayId) {
-    try {
-      await api.selectPathway(userPathwayId);
-      navigate("/pathway");
-    } catch (err) {
-      alert("Failed to select pathway. Please try again.");
-    }
-  }
-
-  async function handleSelectTemplatePathway(pathwayId) {
-    try {
-      await api.selectTemplatePathway(pathwayId);
-      navigate("/pathway");
-    } catch (err) {
-      alert("Failed to select pathway. Please try again.");
-    }
-  }
-
-
-  async function toggleSave() {
-    const next = !saved;
-    setSaved(next);
-    try {
-      if (type === 'ai_profile' && careerId) {
-        if (careerId.startsWith("rec_")) return;
-        if (next) await api.saveAiCareer(careerId);
-        else await api.unsaveAiCareer(careerId);
-      } else {
-        const templateId = pathway?.pathway_id;
-        if (!templateId) return;
-        if (next) await api.savePathway(templateId);
-        else await api.unsavePathway(templateId);
-      }
-    } catch (err) {
-      setSaved(!next);
-    }
-  }
-
-  async function markStepComplete(stepId) {
-    if (savingStep) return;
-
-    if (type === 'ai_profile' && careerId) {
-      if (careerId.startsWith("rec_")) return;
-      setSavingStep(true);
-      try {
-        const order = pathway.steps.find(s => s.stepId === stepId || s.id === stepId)?.order;
-        if (order === undefined) return;
-        const newProgress = Array.from(new Set([...(pathway.aiProgressRaw || []), order]));
-        const res = await api.updateAiCareerPathwayProgress(careerId, newProgress);
-        setPathway(p => {
-          const nextP = { ...p, aiProgressRaw: unwrapList(res) };
-          nextP.steps = nextP.steps.map(s => ({
-            ...s, status: nextP.aiProgressRaw.includes(s.order) ? "completed" : "pending"
-          }));
-          return nextP;
-        });
-      } catch (err) {
-        setError(err);
-      } finally {
-        setSavingStep(false);
-      }
-      return;
-    }
-
-    const userPathwayId = pathway?.id;
-    if (!userPathwayId) return;
-    setSavingStep(true);
-    try {
-      const updated = unwrapObject(
-        await api.updatePathwayProgress(userPathwayId, [
-          { pathway_step_id: stepId, status: "completed" },
-        ]),
-      );
-      setPathway((p) => ({
-        ...p,
-        status: updated.status,
-        steps: updated.steps,
-      }));
-    } catch (err) {
-      setError(err);
-    } finally {
-      setSavingStep(false);
-    }
-  }
-
-  if (status === "loading")
-    return (
-      <AppShell>
-        <LoadingState label="Loading your pathway..." />
-      </AppShell>
-    );
-  if (status === "error")
-    return (
-      <AppShell>
-        <ErrorState text={error?.message} status={error?.status} />
-      </AppShell>
-    );
-  if (status === "empty")
-    return (
-      <AppShell>
-        <div className="pathway-page">
-          <div className="page-heading-row">
-            <div>
-              <div className="section-kicker">CAREER PATHWAY</div>
-              <h1>No pathway yet</h1>
-              <p>
-                Pick a career and generate a step-by-step pathway toward it.
-              </p>
-            </div>
-          </div>
-          <EmptyState
-            title="You don't have a pathway yet"
-            text={
-              getToken()
-                ? "Open a career guide and generate a pathway toward it."
-                : "Log in, then open a career guide to generate a pathway toward it."
-            }
-            action="Explore careers"
-            onAction={() => {
-              window.location.href = "/careers";
-            }}
-          />
-        </div>
-      </AppShell>
-    );
-
-  const renderExistingPathways = () => {
-    if (!existingPathways || existingPathways.length === 0) return null;
-    return (
-      <div style={{ marginBottom: 40 }}>
-        <div className="section-title">
-          <h2>EXISTING CAREER PATHWAYS</h2>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
-          {existingPathways.map(p => (
-            <div key={p.id} className="panel detail-panel" style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <h3 style={{ fontSize: 18, marginBottom: 8 }}>{p.title}</h3>
-                  <p className="muted" style={{ fontSize: 14 }}>{p.description || "A standard reference pathway."}</p>
-                </div>
-                <button className="btn outline" onClick={() => handleSelectTemplatePathway(p.id)}>
-                  View pathway
-                </button>
-              </div>
-
-              {p.steps && p.steps.length > 0 && (
-                <div style={{ marginTop: 24, padding: '16px', background: '#f8fafc', borderRadius: 8 }}>
-                  <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)', fontWeight: 500, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                    {p.steps.map(s => s.title).join(' → ')}
-                  </p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  if (status === "pre_generation") {
-    return (
-      <AppShell>
-        <div className="pathway-page">
-          <div className="page-heading-row">
-            <div>
-              <div className="section-kicker">CAREER PATHWAY</div>
-              <h1>Career Path for {careerTitle}</h1>
-            </div>
-          </div>
-
-          {renderExistingPathways()}
-
-          <div className="section-title">
-            <h2>PERSONALIZED AI PATHWAYS</h2>
-          </div>
-          <div className="panel pathway-card" style={{ padding: '40px 20px', textAlign: 'center' }}>
-            <h2 style={{ marginBottom: 12 }}>Generate personalized pathways</h2>
-            <p className="muted" style={{ marginBottom: 24 }}>
-              Our AI will analyze your profile and current skills to generate two meaningfully different strategies tailored for you.
-            </p>
-            {error && <p style={{ color: "var(--red)", marginBottom: 16 }}>{error.message || "Failed to generate pathways right now."}</p>}
-            <button className="btn primary large" onClick={handleGenerate} disabled={isGenerating}>
-              {isGenerating ? "Generating 2 pathways..." : "Generate 2 AI pathways"} <ArrowRight size={16} />
-            </button>
-          </div>
-        </div>
-      </AppShell>
-    );
-  }
-
-  if (status === "generated_selection") {
-    return (
-      <AppShell>
-        <div className="pathway-page">
-          <div className="page-heading-row">
-            <div>
-              <div className="section-kicker">CAREER PATHWAY</div>
-              <h1>Career Path for {careerTitle}</h1>
-            </div>
-          </div>
-
-          {renderExistingPathways()}
-
-          <div className="section-title">
-            <h2>AI-GENERATED ALTERNATIVES</h2>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-            {generatedPathways.map((p, idx) => {
-              const ctx = p.generated_context || {};
-              return (
-                <div key={p.id} className="panel detail-panel" style={{ display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ marginBottom: 16 }}>
-                    <span className="label" style={{ color: 'var(--blue)' }}>AI PATHWAY {idx === 0 ? 'A' : 'B'}</span>
-                    <h2 style={{ marginTop: 4 }}>{p.title}</h2>
-                    <p className="muted" style={{ fontSize: 14 }}>{ctx.estimated_duration || "Estimated duration varies"}</p>
-                  </div>
-                  <div style={{ marginBottom: 24 }}>
-                    <h3 style={{ fontSize: 13, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>Strategy</h3>
-                    <p style={{ fontSize: 14, lineHeight: 1.5 }}>{ctx.strategy || "A strategic pathway to your goal."}</p>
-                  </div>
-                  <div style={{ marginBottom: 24, flex: 1 }}>
-                    <h3 style={{ fontSize: 13, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 12 }}>Steps</h3>
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      {p.steps.slice(0, 5).map(s => (
-                        <li key={s.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                          <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#eef2ff', color: 'var(--blue)', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600, flex: 'none' }}>{s.step_order}</div>
-                          <div>
-                            <div style={{ fontWeight: 500, fontSize: 14 }}>{s.title}</div>
-                            <div style={{ fontSize: 13, color: 'var(--muted)' }}>{s.description}</div>
-                          </div>
-                        </li>
-                      ))}
-                      {p.steps.length > 5 && (
-                        <li style={{ fontSize: 13, color: 'var(--muted)', paddingLeft: 36 }}>+ {p.steps.length - 5} more steps</li>
-                      )}
-                    </ul>
-                  </div>
-                  <button className="btn outline" onClick={() => handleSelectPathway(p.id)} style={{ width: '100%', justifyContent: 'center' }}>
-                    Choose this path
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </AppShell>
-    );
-  }
-
-  const steps = (pathway?.steps || []).map((s) => ({
-    ...s,
-    stepId: s.pathway_step_id ?? s.id,
-  }));
-  const total = steps.length;
-  const completed = steps.filter((s) => s.status === "completed").length;
-  const pct = total ? Math.round((completed / total) * 100) : 0;
-  const nextStep = steps.find((s) => s.status !== "completed");
-
   return (
     <AppShell>
-      <div className="pathway-page">
-        <div className="page-heading-row">
-          <div>
-            <div className="section-kicker">CAREER PATHWAY</div>
-            <h1 style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-              {pathway?.career_title
-                ? `Your pathway to ${pathway.career_title}`
-                : "Your pathway"}
-              {(origin === 'ai_generated' || (vstatus && vstatus !== 'verified')) && (
-                <AIBadge origin={origin} verificationStatus={vstatus} />
-              )}
-            </h1>
-            <p>A step-by-step plan based on your profile.</p>
-          </div>
-          {pathway?.pathway_id && (
-            <button className="icon-save" onClick={toggleSave}>
-              {saved ? <BookmarkCheck /> : <Bookmark />}{" "}
-              <span>{saved ? "Saved" : "Save"}</span>
-            </button>
-          )}
-        </div>
-        {error && (
-          <p style={{ color: "var(--red)", fontSize: 11 }}>{error.message}</p>
-        )}
-        <div className="pathway-layout">
-          <div className="panel pathway-card">
-            <div className="pathway-line" />
-            {steps.length ? (
-              steps.map((s, i) => (
-                <div
-                  className={`path-step ${s.status === "completed" ? "completed" : nextStep && s.stepId === nextStep.stepId ? "next" : ""}`}
-                  key={s.stepId ?? i}
-                >
-                  <div className="path-num">
-                    {s.status === "completed" ? <Check size={15} /> : i + 1}
-                  </div>
-                  <div className="path-copy">
-                    <div className="path-title">
-                      <h3>{s.title}</h3>
-                      <span>
-                        {s.status === "completed"
-                          ? "Completed"
-                          : s.status === "in_progress"
-                            ? "In progress"
-                            : "Not started"}
-                      </span>
-                    </div>
-                    <p>{s.description}</p>
-                    {s.status !== "completed" && (
-                      <div className="next-actions">
-                        <button
-                          className="btn outline"
-                          disabled={savingStep}
-                          onClick={() => markStepComplete(s.stepId)}
-                        >
-                          {savingStep ? "Saving..." : "Mark complete"}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <EmptyState
-                title="No steps yet"
-                text="This pathway doesn't have steps yet."
-              />
-            )}
-          </div>
-          <aside className="panel path-summary">
-            <span className="label">YOUR PROGRESS</span>
-            <div className="big-progress">
-              <b>{pct}%</b>
-              <span>
-                {completed} of {total} steps
-              </span>
-            </div>
-            <div className="progress large">
-              <i style={{ width: `${pct}%` }} />
-            </div>
-          </aside>
-        </div>
-      </div>
+      <CareerPathwayView user={user} />
+    </AppShell>
+  );
+}
+
+function ProjectsStudio() {
+  const { user } = useAuth();
+  return (
+    <AppShell>
+      <ProjectsStudioPage user={user} />
     </AppShell>
   );
 }
 
 function Opportunities() {
   const [type, setType] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
   const [locationFilter, setLocationFilter] = useState("All");
   const [search, setSearch] = useState("");
-  const [closingSoon, setClosingSoon] = useState(false);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 20;
+
   const [opportunities, setOpportunities] = useState([]);
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState(null);
+  const abortControllerRef = useRef(null);
 
-  useEffect(() => {
-    let active = true;
+  const load = (curSearch, curType, curStatus, curLoc, curPage) => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const signal = controller.signal;
+
     setStatus("loading");
     setError(null);
+
+    let backendType;
+    if (curType === "Government") backendType = "government";
+    else if (curType === "Private Sector") backendType = "private_sector";
+    else if (curType === "Internship") backendType = "internship";
+
+    let backendStatus;
+    if (curStatus === "Open") backendStatus = "open";
+    else if (curStatus === "Closing Soon") backendStatus = "closing_soon";
+    else if (curStatus === "Closed") backendStatus = "closed";
+
+    const params = {
+      page: curPage,
+      limit,
+      search: curSearch.trim() || undefined,
+      opportunity_type: backendType,
+      status: backendStatus,
+      location: curLoc !== "All" ? curLoc : undefined,
+    };
+
     api
-      .opportunities({
-        search: search.trim() || undefined,
-        opportunity_type: type !== "All" ? type : undefined,
-        location: locationFilter !== "All" ? locationFilter : undefined,
-      })
+      .opportunities(params, { signal })
       .then((data) => {
-        if (!active) return;
-        setOpportunities(unwrapList(data).map(normalizeOpportunity));
+        if (signal.aborted) return;
+        const items = unwrapList(data).map(normalizeOpportunity);
+        setOpportunities(items);
+        const serverTotal = data?.pagination?.total ?? items.length;
+        setTotal(serverTotal);
+        setTotalPages(data?.pagination?.total_pages ?? Math.max(1, Math.ceil(serverTotal / limit)));
         setStatus("ready");
       })
       .catch((err) => {
-        if (!active) return;
+        if (signal.aborted) return;
         setError(err);
         setStatus("error");
       });
+  };
+
+  useEffect(() => {
+    load(search, type, statusFilter, locationFilter, page);
     return () => {
-      active = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
-  }, [search, type, locationFilter]);
+  }, [search, type, statusFilter, locationFilter, page]);
+
+  const handleSearchChange = (val) => {
+    setSearch(val);
+    setPage(1);
+  };
+
+  const handleTypeChange = (val) => {
+    setType(val);
+    setPage(1);
+  };
+
+  const handleStatusChange = (val) => {
+    setStatusFilter(val);
+    setPage(1);
+  };
+
+  const handleLocationChange = (val) => {
+    setLocationFilter(val);
+    setPage(1);
+  };
+
+  const resetFilters = () => {
+    setSearch("");
+    setType("All");
+    setStatusFilter("All");
+    setLocationFilter("All");
+    setPage(1);
+  };
+
+  const hasActiveFilters = search.trim() !== "" || type !== "All" || statusFilter !== "All" || locationFilter !== "All";
+  const isClosingSoonTab = statusFilter === "Closing Soon";
 
   const filterBar = (
     <div className="opportunity-filter">
-      <Search />
+      <Search size={15} />
       <input
         aria-label="Search opportunities"
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search opportunities"
+        onChange={(e) => handleSearchChange(e.target.value)}
+        placeholder="Search by title, employer, category..."
       />
       <select
         aria-label="Opportunity type"
         value={type}
-        onChange={(e) => setType(e.target.value)}
+        onChange={(e) => handleTypeChange(e.target.value)}
       >
-        <option>All</option>
-        <option>Government</option>
-        <option>Internship</option>
-        <option>Apprenticeship</option>
+        <option value="All">All types</option>
+        <option value="Government">Government</option>
+        <option value="Private Sector">Private Sector</option>
+        <option value="Internship">Internship</option>
+      </select>
+      <select
+        aria-label="Opportunity status"
+        value={statusFilter}
+        onChange={(e) => handleStatusChange(e.target.value)}
+      >
+        <option value="All">All statuses</option>
+        <option value="Open">Open</option>
+        <option value="Closing Soon">Closing soon</option>
+        <option value="Closed">Closed</option>
       </select>
       <select
         aria-label="Opportunity location"
         value={locationFilter}
-        onChange={(e) => setLocationFilter(e.target.value)}
+        onChange={(e) => handleLocationChange(e.target.value)}
       >
-        <option>All</option>
-        <option>Goa</option>
-        <option>Remote</option>
-        <option>Pan India</option>
+        <option value="All">All locations</option>
+        <option value="Goa">Goa</option>
+        <option value="Bengaluru">Bengaluru</option>
+        <option value="Remote">Remote</option>
       </select>
+      {hasActiveFilters && (
+        <button
+          type="button"
+          className="opp-filter-reset"
+          onClick={resetFilters}
+          title="Reset all filters"
+        >
+          <X size={12} /> Reset
+        </button>
+      )}
     </div>
   );
-
-  // "Closing soon" is a real client-side filter over real deadline data
-  // (application_deadline), not a separate backend endpoint.
-  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-  const visible = closingSoon
-    ? opportunities.filter(
-      (o) =>
-        o.deadlineDate &&
-        o.deadlineDate.getTime() - Date.now() <= THIRTY_DAYS_MS &&
-        o.deadlineDate.getTime() - Date.now() >= 0,
-    )
-    : opportunities;
 
   return (
     <AppShell>
@@ -4288,15 +4355,15 @@ function Opportunities() {
         </div>
         <div className="tabs opportunity-tabs">
           <a
-            className={closingSoon ? "" : "active"}
-            onClick={() => setClosingSoon(false)}
+            className={!isClosingSoonTab ? "active" : ""}
+            onClick={() => handleStatusChange("All")}
             style={{ cursor: "pointer" }}
           >
             All opportunities
           </a>
           <a
-            className={closingSoon ? "active" : ""}
-            onClick={() => setClosingSoon(true)}
+            className={isClosingSoonTab ? "active" : ""}
+            onClick={() => handleStatusChange("Closing Soon")}
             style={{ cursor: "pointer" }}
           >
             Closing soon
@@ -4307,51 +4374,93 @@ function Opportunities() {
           <LoadingState label="Loading opportunities..." layout="list" />
         )}
         {status === "error" && (
-          <ErrorState text={error?.message} status={error?.status} />
+          <ErrorState text={error?.message} status={error?.status} onRetry={() => load(search, type, statusFilter, locationFilter, page)} />
         )}
         {status === "ready" &&
-          (visible.length ? (
-            <div className="opportunity-list">
-              {visible.map((o) => (
-                <Link
-                  className="opportunity-card"
-                  to={`/opportunities/${o.id}`}
-                  key={o.id}
-                >
-                  <div className="opp-logo">
-                    <Building2 />
-                  </div>
-                  <div className="opp-main">
-                    <div className="opp-top">
-                      <span className={`status-pill ${o.status.toLowerCase()}`}>
-                        {o.status}
-                      </span>
-                      <span>{o.type}</span>
+          (opportunities.length > 0 ? (
+            <>
+              <div className="opportunity-list">
+                {opportunities.map((o) => (
+                  <Link
+                    className="opportunity-card"
+                    to={`/opportunities/${o.id}`}
+                    key={o.id}
+                  >
+                    <div className="opp-logo">
+                      <Building2 />
                     </div>
-                    <h2>{o.title}</h2>
-                    <p>
-                      <Building2 size={14} />
-                      {o.org} · <MapPin size={14} />
-                      {o.location}
-                    </p>
-                    <div className="opp-meta">
-                      <span>
-                        <CalendarDays /> Deadline: <b>{o.deadline}</b>
-                      </span>
+                    <div className="opp-main">
+                      <div className="opp-top">
+                        <span className={`status-pill ${o.statusClass}`}>
+                          {o.status}
+                        </span>
+                        <span>{o.type}</span>
+                        {o.sourceName && (
+                          <span style={{ fontSize: 11, color: "var(--muted, #64748b)" }}>
+                            · {o.sourceName}
+                          </span>
+                        )}
+                      </div>
+                      <h2>{o.title}</h2>
+                      <p>
+                        <Building2 size={14} />
+                        {o.org}
+                        {o.location ? " · " : ""}
+                        {o.location && <MapPin size={14} />}
+                        {o.location ? ` ${o.location}` : ""}
+                      </p>
+                      <div className="opp-meta">
+                        <span>
+                          <CalendarDays /> Deadline: <b>{o.deadline}</b>
+                        </span>
+                        {o.vacancies ? (
+                          <span>
+                            · Vacancies: <b>{o.vacancies}</b>
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
+                    <ArrowRight size={18} />
+                  </Link>
+                ))}
+              </div>
+              {total > limit && (
+                <div className="opportunity-pagination">
+                  <span>
+                    Showing {Math.min((page - 1) * limit + 1, total)}–{Math.min(page * limit, total)} of {total} opportunities
+                  </span>
+                  <div className="pagination-controls">
+                    <button
+                      type="button"
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    >
+                      <ArrowLeft size={13} /> Previous
+                    </button>
+                    <span>
+                      Page {page} of {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={page >= totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    >
+                      Next <ArrowRight size={13} />
+                    </button>
                   </div>
-                  <ArrowRight size={18} />
-                </Link>
-              ))}
-            </div>
+                </div>
+              )}
+            </>
           ) : (
             <EmptyState
-              title={
-                closingSoon
-                  ? "Nothing is closing in the next 30 days"
-                  : "No verified opportunities are listed yet"
+              title="No opportunities match your filters"
+              text={
+                hasActiveFilters
+                  ? "Try adjusting your search keywords, status, or category filter to discover more opportunities."
+                  : "NaviGoa does not show sample vacancies as if they are live. Check back when a source-backed listing is available."
               }
-              text="CareerGPS does not show example vacancies as if they are live. Check back when a source-backed listing is available."
+              action={hasActiveFilters ? "Reset filters" : undefined}
+              onAction={hasActiveFilters ? resetFilters : undefined}
             />
           ))}
       </div>
@@ -4402,11 +4511,18 @@ function OpportunityDetail() {
       </AppShell>
     );
 
+  const statusInfo = formatOpportunityStatus(o.status, o.application_deadline);
+  const oppType = formatOpportunityType(o.opportunity_type);
   const deadline = o.application_deadline
-    ? new Date(o.application_deadline).toLocaleDateString()
-    : "Not specified";
-  const requirements = o.requirements || [];
-  const relatedCareers = o.related_careers || [];
+    ? new Date(o.application_deadline).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+    : "Deadline not specified";
+  const requirements = Array.isArray(o.requirements) ? o.requirements : [];
+  const relatedCareers = Array.isArray(o.related_careers) ? o.related_careers : [];
+
+  const descParagraphs = (o.description || "")
+    .split(/\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
 
   return (
     <AppShell>
@@ -4421,48 +4537,93 @@ function OpportunityDetail() {
             <Building2 size={42} />
           </div>
           <div className="detail-title">
-            <div className="tag">{o.opportunity_type}</div>
+            <div className="tag">{oppType}</div>
             <h1>{o.title}</h1>
-            <p>{o.description}</p>
             <div className="detail-meta">
               <span>
                 <Building2 size={15} />
-                {o.organization}
+                {o.organization || "Organization not specified"}
               </span>
               <span>
                 <MapPin size={15} />
-                {o.location}
+                {o.location || "Location not specified"}
               </span>
               <span>
                 <CalendarDays size={15} />
                 Deadline: {deadline}
               </span>
-              <span className={`status-pill ${(o.status || "").toLowerCase()}`}>
-                {o.status}
+              <span className={`status-pill ${statusInfo.class}`}>
+                {statusInfo.label}
               </span>
+              {o.vacancies_total ? (
+                <span>
+                  Vacancies: <b>{o.vacancies_total}</b>
+                </span>
+              ) : null}
+              {o.advertisement_number ? (
+                <span>
+                  Notice #: <b>{o.advertisement_number}</b>
+                </span>
+              ) : null}
             </div>
           </div>
         </div>
         <div className="detail-grid">
           <div>
             <section className="panel detail-panel">
-              <h2>Requirements</h2>
-              {requirements.length ? (
-                requirements.map((r) => (
-                  <div className="requirement" key={r.id}>
-                    <div className="req-icon unknown">
-                      <CircleHelp size={15} />
-                    </div>
-                    <div>
-                      <b>{r.requirement_type}</b>
-                      <span>{r.requirement_text}</span>
-                    </div>
-                  </div>
+              <h2>About this Opportunity</h2>
+              {descParagraphs.length > 0 ? (
+                descParagraphs.map((p, idx) => (
+                  <p key={idx} className="opp-desc-paragraph">
+                    {p}
+                  </p>
                 ))
               ) : (
                 <p className="muted">
+                  No extended role description provided in the notice. Review official notice links and requirements below.
+                </p>
+              )}
+            </section>
+
+            <section className="panel detail-panel">
+              <h2>Requirements & Eligibility</h2>
+              {requirements.length ? (
+                requirements.map((r, idx) => {
+                  const isVerified = r.verification_status === "verified";
+                  const reqText = r.requirement_text || "";
+                  const hasSubClauses = /\((?:i|ii|iii|iv|v|[a-z]|\d+)\)/i.test(reqText);
+                  const subClauses = hasSubClauses
+                    ? reqText.split(/(?=\((?:i|ii|iii|iv|v|[a-z]|\d+)\))/i).map((s) => s.trim()).filter(Boolean)
+                    : [];
+
+                  return (
+                    <div className="requirement" key={r.id || idx}>
+                      <div className={`req-icon ${isVerified ? "verified" : "pending"}`}>
+                        {isVerified ? <CheckCircle2 size={15} /> : <CircleHelp size={15} />}
+                      </div>
+                      <div>
+                        <b>{r.requirement_type ? formatOpportunityType(r.requirement_type) : "Requirement"}</b>
+                        {subClauses.length > 1 ? (
+                          <ul className="req-sublist">
+                            {subClauses.map((clause, cIdx) => (
+                              <li key={cIdx}>{clause}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span>{reqText}</span>
+                        )}
+                        <small style={{ marginTop: 4, display: "block" }}>
+                          {isVerified ? "Verified requirement" : "Needs verification — consult official notice"}
+                        </small>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="muted">
                   No structured requirements have been published for this
-                  opportunity yet.
+                  opportunity yet. Verify criteria directly on the official
+                  application notice.
                 </p>
               )}
             </section>
@@ -4495,17 +4656,36 @@ function OpportunityDetail() {
               Check my eligibility <ArrowRight size={16} />
             </Link>
             <small>
-              Always verify requirements against the official notice.
+              {o.verification_status === "verified"
+                ? "Verified source-backed listing."
+                : "Awaiting manual verification."}
+              {o.verified_at && ` Verified on ${new Date(o.verified_at).toLocaleDateString("en-IN")}.`}
             </small>
             {o.source_url && (
               <a
                 href={o.source_url}
                 target="_blank"
                 rel="noreferrer"
-                style={{ display: "block", marginTop: 12, fontSize: 11 }}
+                className="btn secondary full"
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 12 }}
               >
-                Official source <ExternalLink size={12} />
+                Apply / Official notice <ExternalLink size={14} />
               </a>
+            )}
+            {o.source_document_url && o.source_document_url !== o.source_url && (
+              <a
+                href={o.source_document_url}
+                target="_blank"
+                rel="noreferrer"
+                style={{ display: "block", marginTop: 8, fontSize: 11, textAlign: "center" }}
+              >
+                Official document notice <ExternalLink size={12} />
+              </a>
+            )}
+            {o.source_name && (
+              <div style={{ marginTop: 12, fontSize: 12, color: "var(--muted, #64748b)", textAlign: "center" }}>
+                Source: <b>{o.source_name}</b>
+              </div>
             )}
           </aside>
         </div>
@@ -4658,7 +4838,7 @@ function Institutions() {
         <div className="source-note learn-note">
           <ShieldCheck size={15} />
           <span>
-            CareerGPS lists institutions for reference only. Confirm admissions,
+            NaviGoa lists institutions for reference only. Confirm admissions,
             fees and recognition directly with the institution.
           </span>
         </div>
@@ -4866,7 +5046,7 @@ function Learn() {
         <div className="source-note learn-note">
           <ShieldCheck size={15} />
           <span>
-            CareerGPS lists learning directions, not endorsements of individual
+            NaviGoa lists learning directions, not endorsements of individual
             courses. Confirm curriculum, eligibility, fees and recognition
             directly with the provider.
           </span>
@@ -4880,6 +5060,9 @@ function SkillPicker({ userSkillIds, selectedSkills = [], toggleSkill, careerGoa
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
+  const [activeTab, setActiveTab] = useState('recommended'); // 'recommended', 'all'
+  const [selectedCategory, setSelectedCategory] = useState('');
+  
   const [recommendedSkills, setRecommendedSkills] = useState([]);
   const [searchSkills, setSearchSkills] = useState([]);
 
@@ -4898,9 +5081,15 @@ function SkillPicker({ userSkillIds, selectedSkills = [], toggleSkill, careerGoa
     return () => clearTimeout(timer);
   }, [query]);
 
+  // Reset page when category changes
+  useEffect(() => {
+    setPage(1);
+  }, [selectedCategory, activeTab]);
+
   useEffect(() => {
     if (!educationContext && !careerGoal) {
       setRecommendedSkills([]);
+      if (activeTab === 'recommended') setActiveTab('all');
       return;
     }
 
@@ -4914,7 +5103,7 @@ function SkillPicker({ userSkillIds, selectedSkills = [], toggleSkill, careerGoa
       }, { signal: controller.signal })
         .then(res => setRecommendedSkills(unwrapList(res)))
         .catch((err) => {
-          if (err.name === 'AbortError' || err.code === 'TIMEOUT') return;
+          if (err.name === 'AbortError' || err.code === 'TIMEOUT' || err.code === 'CANCELLED') return;
           console.error("Failed to load skill suggestions:", err);
           setRecsError("Personalized suggestions are temporarily unavailable.");
         })
@@ -4930,8 +5119,9 @@ function SkillPicker({ userSkillIds, selectedSkills = [], toggleSkill, careerGoa
   }, [careerGoal, educationContext]);
 
   useEffect(() => {
+    if (activeTab !== 'all' && !debouncedQuery) return; // Only load search skills when in 'all' tab or when searching
     setLoadingSearch(true);
-    api.skills({ search: debouncedQuery, page, limit: 20 })
+    api.skills({ search: debouncedQuery, category: selectedCategory, page, limit: 30 })
       .then(res => {
         const data = unwrapList(res);
         if (page === 1) setSearchSkills(data);
@@ -4940,35 +5130,81 @@ function SkillPicker({ userSkillIds, selectedSkills = [], toggleSkill, careerGoa
       })
       .catch(() => { })
       .finally(() => setLoadingSearch(false));
-  }, [debouncedQuery, page]);
+  }, [debouncedQuery, page, selectedCategory, activeTab]);
 
-  const displaySkills = debouncedQuery ? searchSkills : recommendedSkills;
-  const isSearchMode = !!debouncedQuery;
+  // If user types a query, automatically switch to "All Skills" to search everything
+  useEffect(() => {
+    if (debouncedQuery) setActiveTab('all');
+  }, [debouncedQuery]);
 
+  const displaySkills = activeTab === 'recommended' && !debouncedQuery ? recommendedSkills : searchSkills;
+  
   const uniqueDisplaySkills = Array.from(new Map(displaySkills.map(sk => [sk.id || sk.name, sk])).values());
-  const groups = {};
+  const groups = { direct: {}, supporting: {}, optional: {}, general: {} };
+  
   for (const sk of uniqueDisplaySkills) {
     const cat = sk.category || "Other";
-    if (!groups[cat]) groups[cat] = [];
-    groups[cat].push(sk);
+    if (activeTab === 'recommended' && !debouncedQuery) {
+      let rel = sk.relationship;
+      if (rel === 'possessed' || rel === 'direct') rel = 'direct';
+      else if (rel === 'optional') rel = 'optional';
+      else rel = 'supporting'; // Default for recommended
+
+      if (!groups[rel][cat]) groups[rel][cat] = [];
+      groups[rel][cat].push(sk);
+    } else {
+      if (!groups.general[cat]) groups.general[cat] = [];
+      groups.general[cat].push(sk);
+    }
   }
+
+  // Predefined common categories for the filter
+  const commonCategories = [
+    'programming', 'frontend', 'backend', 'databases', 'cloud', 'AI', 'data_science',
+    'finance', 'business', 'marketing', 'design', 'soft_skill', 'tools'
+  ];
 
   return (
     <div className="skill-picker-container" style={{ marginTop: 12 }}>
-      <div className="search-bar" style={{ marginBottom: 16, position: 'relative' }}>
-        <Search size={16} />
-        <input
-          placeholder="Search or add skills for your field..."
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-        />
-        {(loadingRecs || loadingSearch) && <span className="muted" style={{ fontSize: 12, position: 'absolute', right: 12 }}>Loading...</span>}
+      
+      {/* Search and Tabs */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+        <div className="search-bar" style={{ position: 'relative' }}>
+          <Search size={16} />
+          <input
+            placeholder="Search thousands of skills..."
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+          />
+          {(loadingRecs || loadingSearch) && <span className="muted" style={{ fontSize: 12, position: 'absolute', right: 12 }}>Loading...</span>}
+        </div>
+        
+        <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid var(--line)', paddingBottom: 8 }}>
+          <button 
+            type="button" 
+            className={`btn small ${activeTab === 'recommended' ? 'primary' : 'outline'}`} 
+            onClick={() => { setActiveTab('recommended'); setQuery(''); }}
+            disabled={!educationContext && !careerGoal}
+          >
+            Recommended for you
+          </button>
+          <button 
+            type="button" 
+            className={`btn small ${activeTab === 'all' ? 'primary' : 'outline'}`} 
+            onClick={() => setActiveTab('all')}
+          >
+            All Skills Catalogue
+          </button>
+        </div>
       </div>
 
+      {/* Selected Skills */}
       {selectedSkills.length > 0 && (
         <div style={{ marginBottom: 24, padding: '12px 16px', background: 'var(--bg-light)', borderRadius: 8, border: '1px solid var(--line)' }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Your Selected Skills
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+               Your Selected Skills ({selectedSkills.length})
+             </div>
           </div>
           <div className="chip-picker compact">
             {selectedSkills.map(sk => (
@@ -4979,811 +5215,212 @@ function SkillPicker({ userSkillIds, selectedSkills = [], toggleSkill, careerGoa
                 style={{ cursor: "pointer", display: 'inline-flex', alignItems: 'center', gap: 4 }}
               >
                 {sk.name}
+                <X size={12} />
               </span>
             ))}
           </div>
         </div>
       )}
 
-
-      {!isSearchMode && (careerGoal || educationContext) && uniqueDisplaySkills.length > 0 && !recsError && (
-        <div style={{ marginBottom: 16, fontSize: 13, fontWeight: 500, color: 'var(--brand)' }}>
-          Recommended Skills based on your profile
-        </div>
+      {/* Category Filter for All Skills tab */}
+      {activeTab === 'all' && !debouncedQuery && (
+         <div style={{ marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
+           <div style={{ display: 'flex', gap: 6, width: 'max-content' }}>
+              <span 
+                className={`chip ${!selectedCategory ? 'active' : ''}`}
+                onClick={() => setSelectedCategory('')}
+                style={{ cursor: 'pointer', fontSize: 12, padding: '2px 8px' }}
+              >
+                All Categories
+              </span>
+              {commonCategories.map(cat => (
+                <span 
+                  key={cat}
+                  className={`chip ${selectedCategory === cat ? 'active' : ''}`}
+                  onClick={() => setSelectedCategory(cat)}
+                  style={{ cursor: 'pointer', fontSize: 12, padding: '2px 8px', textTransform: 'capitalize' }}
+                >
+                  {cat.replace('_', ' ')}
+                </span>
+              ))}
+           </div>
+         </div>
       )}
 
-      {recsError && !isSearchMode && (
+      {/* Error State */}
+      {recsError && activeTab === 'recommended' && (
         <div style={{ padding: 12, background: "rgba(255, 165, 0, 0.1)", borderRadius: 6, marginBottom: 16 }}>
           <p style={{ color: "var(--brand)", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
             <AlertCircle size={16} /> {recsError}
           </p>
           <p style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 4 }}>
-            Browse all skills below.
+            Browse the full catalogue under "All Skills".
           </p>
         </div>
       )}
 
-      {!isSearchMode && uniqueDisplaySkills.length === 0 && !loadingRecs && (
+      {/* Empty State for Recommendations */}
+      {activeTab === 'recommended' && uniqueDisplaySkills.length === 0 && !loadingRecs && !recsError && (
         <div style={{ marginBottom: 16, fontSize: 13, color: 'var(--text-muted)' }}>
-          Type below to search for skills.
+          No personalized recommendations found. Check the "All Skills" tab to browse.
         </div>
       )}
 
-      {Object.entries(groups).map(([cat, skills]) => (
-        <div key={cat} style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{cat}</div>
-          <div className="chip-picker compact">
-            {skills.map(sk => {
-              const selected = userSkillIds.has(sk.id);
-              return (
-                <span
-                  key={sk.id || sk.name}
-                  className={`chip ${selected ? "active" : ""}`}
-                  onClick={() => toggleSkill(sk)}
-                  style={{ cursor: "pointer", display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                  title={sk.description || sk.name}
-                >
-                  {sk.name}
-                  {sk.origin === 'ai_generated' && <Sparkles size={12} color="var(--brand)" title="AI Suggested" />}
-                  {selected && <Check size={14} />}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-      ))}
+      {/* Recommended Tab Content */}
+      {activeTab === 'recommended' && !debouncedQuery && uniqueDisplaySkills.length > 0 && !recsError && (
+        <>
+          {Object.keys(groups.direct).length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--brand)', marginBottom: 12 }}>
+                Core Skills
+              </div>
+              {Object.entries(groups.direct).map(([cat, skills]) => (
+                <div key={cat} style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{cat.replace('_', ' ')}</div>
+                  <div className="chip-picker compact">
+                    {skills.map(sk => {
+                      const selected = userSkillIds.has(sk.id);
+                      return (
+                        <span
+                          key={sk.id || sk.name}
+                          className={`chip ${selected ? "active" : ""}`}
+                          onClick={() => toggleSkill(sk)}
+                          style={{ cursor: "pointer", display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          title={sk.description || sk.name}
+                        >
+                          {sk.name}
+                          {sk.origin === 'ai_generated' && <Sparkles size={12} color="var(--brand)" title="AI Suggested" />}
+                          {selected && <Check size={14} />}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
-      {uniqueDisplaySkills.length === 0 && !loadingRecs && !loadingSearch && isSearchMode && (
-        <p className="muted" style={{ fontSize: 14 }}>No skills found matching your search.</p>
+          {Object.keys(groups.supporting).length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--brand)', marginBottom: 12 }}>
+                Supporting Skills
+              </div>
+              {Object.entries(groups.supporting).map(([cat, skills]) => (
+                <div key={cat} style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{cat.replace('_', ' ')}</div>
+                  <div className="chip-picker compact">
+                    {skills.map(sk => {
+                      const selected = userSkillIds.has(sk.id);
+                      return (
+                        <span
+                          key={sk.id || sk.name}
+                          className={`chip ${selected ? "active" : ""}`}
+                          onClick={() => toggleSkill(sk)}
+                          style={{ cursor: "pointer", display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          title={sk.description || sk.name}
+                        >
+                          {sk.name}
+                          {sk.origin === 'ai_generated' && <Sparkles size={12} color="var(--brand)" title="AI Suggested" />}
+                          {selected && <Check size={14} />}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {Object.keys(groups.optional).length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--brand)', marginBottom: 12 }}>
+                Optional / Transferable Skills
+              </div>
+              {Object.entries(groups.optional).map(([cat, skills]) => (
+                <div key={cat} style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{cat.replace('_', ' ')}</div>
+                  <div className="chip-picker compact">
+                    {skills.map(sk => {
+                      const selected = userSkillIds.has(sk.id);
+                      return (
+                        <span
+                          key={sk.id || sk.name}
+                          className={`chip ${selected ? "active" : ""}`}
+                          onClick={() => toggleSkill(sk)}
+                          style={{ cursor: "pointer", display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          title={sk.description || sk.name}
+                        >
+                          {sk.name}
+                          {sk.origin === 'ai_generated' && <Sparkles size={12} color="var(--brand)" title="AI Suggested" />}
+                          {selected && <Check size={14} />}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
-      {isSearchMode && hasMore && (
-        <button
-          type="button"
-          className="btn outline"
-          style={{ width: '100%', marginTop: 8 }}
-          onClick={() => setPage(p => p + 1)}
-          disabled={loadingSearch}
-        >
-          {loadingSearch ? "Loading..." : "Load More"}
-        </button>
+      {/* All Skills Tab Content */}
+      {activeTab === 'all' && (
+        <>
+          {Object.entries(groups.general).map(([cat, skills]) => (
+            <div key={cat} style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{cat.replace('_', ' ')}</div>
+              <div className="chip-picker compact">
+                {skills.map(sk => {
+                  const selected = userSkillIds.has(sk.id);
+                  return (
+                    <span
+                      key={sk.id || sk.name}
+                      className={`chip ${selected ? "active" : ""}`}
+                      onClick={() => toggleSkill(sk)}
+                      style={{ cursor: "pointer", display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                      title={sk.description || sk.name}
+                    >
+                      {sk.name}
+                      {sk.origin === 'ai_generated' && <Sparkles size={12} color="var(--brand)" title="AI Suggested" />}
+                      {selected && <Check size={14} />}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          {uniqueDisplaySkills.length === 0 && !loadingSearch && (
+            <p className="muted" style={{ fontSize: 14 }}>No skills found matching your search.</p>
+          )}
+
+          {hasMore && (
+            <button
+              type="button"
+              className="btn outline"
+              style={{ width: '100%', marginTop: 8 }}
+              onClick={() => setPage(p => p + 1)}
+              disabled={loadingSearch}
+            >
+              {loadingSearch ? "Loading..." : "Load More"}
+            </button>
+          )}
+        </>
       )}
     </div>
   );
 }
 
+
 function Profile() {
+  // Pass the same authenticated identity context used by ProtectedRoute and
+  // AppShell into the extracted ProfilePage component. This avoids a second,
+  // unrelated AuthContext instance and keeps email/refreshUser available.
   const { user, refreshUser } = useAuth();
-  const [form, setForm] = useState(null);
-  const [status, setStatus] = useState("loading");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
-  const [savedMsg, setSavedMsg] = useState("");
-  // All available skills from GET /skills (the database catalogue)
-  const [allSkills, setAllSkills] = useState([]); // [{ id, name, description, category }]
-  const [skillsLoading, setSkillsLoading] = useState(true);
-  const [skillsError, setSkillsError] = useState(null);
-  // The user's currently saved skills from GET /skills/me (user_skills join table)
-  // Each element: { id, name, level, years_experience, verified }
-  const [userSkillIds, setUserSkillIds] = useState(new Set()); // Set of skill_id strings
-  const [userSkillLevels, setUserSkillLevels] = useState({}); // { skill_id: level }
-  const [customSkills, setCustomSkills] = useState([]); // [{ id, name, level }]
-
-  const [careerInfo, setCareerInfo] = useState(null);
-
-  const [validationData, setValidationData] = useState(null);
-  const [isValidating, setIsValidating] = useState(false);
-  const [lastValidatedGoal, setLastValidatedGoal] = useState("");
-  const [availablePrograms, setAvailablePrograms] = useState([]);
-  const [programsLoading, setProgramsLoading] = useState(false);
-
-  useEffect(() => {
-    if (form && (form.educationStage === "Higher Education" || form.educationLevel === "Undergraduate" || form.educationLevel === "Postgraduate")) {
-      setProgramsLoading(true);
-      api.educationPrograms(form.stream).then(res => {
-        const programs = res.data || [];
-        const excluded = ["Masters", "Other", "MBA", "MCA"];
-        const displayPrograms = programs.filter(p => !excluded.includes(p) || p === form.degree);
-        setAvailablePrograms(displayPrograms);
-        if (form.degree && !programs.includes(form.degree)) {
-          setForm(prev => ({ ...prev, degree: "" }));
-          setError("Your selected program is not compatible with this stream. Please select another program.");
-        }
-      }).catch(err => {
-        console.error(err);
-      }).finally(() => {
-        setProgramsLoading(false);
-      });
-    } else {
-      setAvailablePrograms([]);
-    }
-  }, [form?.stream, form?.educationStage, form?.educationLevel]);
-
-  function getCleanedEducation() {
-    if (!form) return [];
-    const edu = { ...form.fullEducation };
-    if (form.educationStage === "Currently in 12th") {
-      edu.education_stage = "SCHOOL_12";
-      edu.school_12_status = "PURSUING";
-      if (form.stream) {
-        edu.school_12_stream = form.stream;
-        edu.stream = form.stream;
-      } else {
-        delete edu.school_12_stream;
-        delete edu.stream;
-      }
-      edu.status = "pursuing";
-      edu.level = "12th / Higher Secondary";
-      delete edu.current_program;
-      delete edu.degree;
-    } else if (form.educationStage === "Higher Education") {
-      edu.education_stage = "HIGHER_EDUCATION";
-      if (form.stream) {
-        edu.school_12_stream = form.stream;
-        edu.stream = form.stream;
-      } else {
-        delete edu.school_12_stream;
-        delete edu.stream;
-      }
-      if (form.degree) {
-        edu.current_program = form.degree;
-        edu.degree = form.degree;
-      } else {
-        delete edu.current_program;
-        delete edu.degree;
-      }
-      if (form.specialization) edu.specialization = form.specialization;
-      if (form.currentYear && !isNaN(parseInt(form.currentYear))) {
-        edu.year = parseInt(form.currentYear);
-      }
-      edu.status = (form.educationStatus || "pursuing").toLowerCase();
-      edu.level = "Undergraduate";
-    } else {
-      edu.education_stage = "WORKING_PROFESSIONAL";
-      edu.level = "Working Professional";
-      delete edu.school_12_stream;
-      delete edu.stream;
-      delete edu.current_program;
-      delete edu.degree;
-    }
-    return [edu];
-  }
-
-  function getCleanedExperience() {
-    if (!form) return [];
-    if (form.educationStage === "Working Professional") {
-      const exp = {};
-      if (form.industry) exp.industry = form.industry;
-      if (form.currentRole) exp.role = form.currentRole;
-      if (form.professionalExperience) exp.duration = form.professionalExperience;
-      return Object.keys(exp).length > 0 ? [exp] : [];
-    } else {
-      return form.experienceText ? [{ description: form.experienceText }] : [];
-    }
-  }
-
-  function handleEducationStageChange(e) {
-    const newStage = e.target.value;
-    const isPro = newStage === "Working Professional";
-    const wasPro = form.educationStage === "Working Professional";
-    const updates = { educationStage: newStage };
-    if (isPro && !wasPro) {
-      updates.stream = ""; updates.degree = ""; updates.specialization = ""; updates.diplomaField = ""; updates.currentYear = ""; updates.experienceText = "";
-    } else if (!isPro && wasPro) {
-      updates.industry = ""; updates.currentRole = ""; updates.professionalExperience = "";
-    }
-    setForm({ ...form, ...updates });
-  }
-
-  const currentProfileContextStr = JSON.stringify({
-    education: getCleanedEducation(),
-    experience: getCleanedExperience(),
-    skills: Array.from(userSkillIds)
-      .filter(id => !customSkills.some(cs => cs.id === id))
-      .map(skill_id => ({
-        skill_id,
-        level: userSkillLevels[skill_id] || "beginner"
-      }))
-  });
-
-  useEffect(() => {
-    if (!form || !form.careerGoal || !form.careerGoal.trim()) {
-      if (validationData) setValidationData(null);
-      return;
-    }
-    const validationKey = `${form.careerGoal}::${currentProfileContextStr}`;
-    if (validationKey === lastValidatedGoal) return;
-
-    const controller = new AbortController();
-    const timer = setTimeout(async () => {
-      setIsValidating(true);
-      setValidationData(null);
-      setError("");
-      try {
-        const valRes = await api.validateGoal(
-          { goal: form.careerGoal, profileContext: JSON.parse(currentProfileContextStr) },
-          { signal: controller.signal }
-        );
-        if (!controller.signal.aborted) {
-          setValidationData(unwrapObject(valRes));
-          setLastValidatedGoal(validationKey);
-        }
-      } catch (err) {
-        if (err.name === 'AbortError' || err.code === 'TIMEOUT') return;
-        console.error("Live validation failed", err);
-      } finally {
-        if (!controller.signal.aborted) setIsValidating(false);
-      }
-    }, 800);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [form?.careerGoal, currentProfileContextStr, lastValidatedGoal, validationData]);
-
-  useEffect(() => {
-    let active = true;
-    // Load profile data, all skills, and user's own skills in parallel.
-    Promise.allSettled([
-      api.profile(),
-      api.skills(),
-      api.mySkills(),
-      api.myCustomSkills()
-    ]).then(([profileRes, allSkillsRes, mySkillsRes, myCustomSkillsRes]) => {
-      if (!active) return;
-
-      if (profileRes.status === "fulfilled") {
-        const p = unwrapObject(profileRes.value);
-        const edu = Array.isArray(p.education) && p.education.length ? p.education[0] : {};
-
-        let eduStage = "Higher Education";
-        if (edu.education_stage === "SCHOOL_12" || edu.level === "12th / Higher Secondary" || edu.level === "12th") {
-          eduStage = "Currently in 12th";
-        } else if (edu.education_stage === "WORKING_PROFESSIONAL" || edu.level === "Working Professional") {
-          eduStage = "Working Professional";
-        } else if (!edu.education_stage && !edu.level && !edu.degree) {
-          eduStage = "Currently in 12th";
-        }
-
-        let exp = "";
-        let ind = "";
-        let role = "";
-        let profExp = "";
-        if (Array.isArray(p.experience) && p.experience.length > 0) {
-          const firstExp = p.experience[0];
-          if (firstExp.role || firstExp.industry || firstExp.duration) {
-            ind = firstExp.industry || "";
-            role = firstExp.role || "";
-            profExp = firstExp.duration || "";
-          } else {
-            exp = firstExp.description || "";
-          }
-        }
-
-        setForm({
-          localName: getLocalName(user?.id) || user?.name || user?.full_name || p.name || p.full_name || (user?.email ? user.email.split("@")[0].charAt(0).toUpperCase() + user.email.split("@")[0].slice(1) : ""),
-          email: user?.email ?? "",
-          educationStage: eduStage,
-          stream: edu.school_12_stream || edu.stream || "",
-          degree: edu.current_program || edu.degree || "",
-          specialization: edu.specialization || "",
-          diplomaField: edu.diplomaField || "",
-          currentYear: edu.year ? String(edu.year) : "",
-          educationStatus: edu.status ? (edu.status.charAt(0).toUpperCase() + edu.status.slice(1)) : "Pursuing",
-          experienceText: exp,
-          industry: ind,
-          currentRole: role,
-          professionalExperience: profExp,
-          fullEducation: edu,
-          careerGoal: p.career_goal ?? "",
-          preferredLocations: Array.isArray(p.preferred_locations) && p.preferred_locations.length ? p.preferred_locations : ["Goa", "Remote"],
-          interests: Array.isArray(p.interests) ? p.interests : [],
-          careerId: p.career_id ?? null,
-          constraints: p.constraints && typeof p.constraints === "object" ? p.constraints : {},
-        });
-        if (p.career_goal) setLastValidatedGoal(p.career_goal);
-
-        if (p.career_id) {
-          api.career(p.career_id)
-            .then(res => setCareerInfo(unwrapObject(res)))
-            .catch(() => {
-              api.aiCareer(p.career_id)
-                .then(res => setCareerInfo(unwrapObject(res)))
-                .catch(() => setCareerInfo(null));
-            });
-        }
-
-        setStatus("ready");
-      } else {
-        setError(profileRes.reason);
-        setStatus("error");
-      }
-
-      if (allSkillsRes.status === "fulfilled") {
-        setAllSkills(unwrapList(allSkillsRes.value));
-        setSkillsError(null);
-      } else {
-        setSkillsError(
-          allSkillsRes.reason?.message || "Could not load skill catalogue.",
-        );
-      }
-      setSkillsLoading(false);
-
-      if (mySkillsRes.status === "fulfilled") {
-        const mySkills = unwrapList(mySkillsRes.value);
-        let myCustoms = [];
-        if (myCustomSkillsRes.status === "fulfilled") {
-          myCustoms = unwrapList(myCustomSkillsRes.value);
-          setCustomSkills(myCustoms);
-        }
-
-        setUserSkillIds(new Set([...mySkills.map((s) => s.id), ...myCustoms.map((s) => s.id)]));
-        const levels = {};
-        mySkills.forEach((s) => {
-          levels[s.id] = s.level || "beginner";
-        });
-        myCustoms.forEach((s) => {
-          levels[s.id] = s.level || "beginner";
-        });
-        setUserSkillLevels(levels);
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function handleSave() {
-    if (isValidating) {
-      setError("Please wait for career goal validation to complete.");
-      return;
-    }
-
-    let currentValidation = validationData;
-    const validationKey = `${form.careerGoal}::${currentProfileContextStr}`;
-
-    if (form.careerGoal?.trim() && validationKey !== lastValidatedGoal) {
-      setIsValidating(true);
-      setValidationData(null);
-      setError("");
-      try {
-        const valRes = await api.validateGoal({
-          goal: form.careerGoal,
-          profileContext: JSON.parse(currentProfileContextStr)
-        });
-        currentValidation = unwrapObject(valRes);
-        setValidationData(currentValidation);
-        setLastValidatedGoal(validationKey);
-      } catch (err) {
-        setError(err.message || "Failed to validate goal.");
-        setIsValidating(false);
-        return;
-      }
-      setIsValidating(false);
-    }
-
-    if (currentValidation && currentValidation.classification === 'RED') {
-      setError("Please fix your career goal before saving. Your current profile does not satisfy formal requirements.");
-      return;
-    }
-
-    setSaving(true);
-    setSavedMsg("");
-    setError(null);
-    try {
-      // 1. Save profile fields via PUT /profiles/me
-      await api.updateProfile({
-        education: getCleanedEducation(),
-        experience: getCleanedExperience(),
-        interests: form.interests,
-        preferred_locations: form.preferredLocations,
-        career_goal: form.careerGoal || null,
-        career_id: currentValidation?.career_id || null,
-        constraints: form.constraints,
-      });
-      // 2. Save user_skills via PUT /skills/me with proper skill_id UUIDs.
-      //    This writes to the user_skills join table and is the canonical
-      //    way to persist a user's skills for gap analysis and recommendations.
-      await api.updateMySkills({
-        skills: Array.from(userSkillIds)
-          .filter(id => !customSkills.some(cs => cs.id === id)) // Exclude custom skills
-          .map((skill_id) => ({
-            skill_id,
-            level: userSkillLevels[skill_id] || "beginner",
-          })),
-      });
-      setLocalName(user?.id, form.localName);
-      await refreshUser();
-      setSavedMsg("Profile and skills saved.");
-    } catch (err) {
-      setError(err);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function toggleSkill(skillObj) {
-    const isCustom = skillObj.origin === 'ai_generated' || skillObj.is_custom;
-    const skillId = skillObj.id;
-
-    if (isCustom) {
-      const isSelected = userSkillIds.has(skillId);
-      if (isSelected) {
-        if (!skillObj.is_new_ai) {
-          try {
-            await api.deleteCustomSkill(skillId);
-            setCustomSkills(prev => prev.filter(s => s.id !== skillId));
-          } catch (err) { }
-        }
-        setUserSkillIds(prev => { const n = new Set(prev); n.delete(skillId); return n; });
-      } else {
-        try {
-          const added = unwrapObject(await api.addCustomSkill({ name: skillObj.name, level: "beginner" }));
-          setCustomSkills(prev => [...prev, added]);
-          setUserSkillIds(prev => { const n = new Set(prev); n.add(added.id); return n; });
-        } catch (err) { }
-      }
-      return;
-    }
-
-    setUserSkillIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(skillId)) {
-        next.delete(skillId);
-      } else {
-        next.add(skillId);
-        if (!userSkillLevels[skillId]) {
-          setUserSkillLevels((lv) => ({ ...lv, [skillId]: "beginner" }));
-        }
-      }
-      return next;
-    });
-  }
-
-  if (status === "loading")
-    return (
-      <AppShell>
-        <LoadingState label="Loading your profile..." layout="profile" />
-      </AppShell>
-    );
-  if (status === "error" || !form)
-    return (
-      <AppShell>
-        <ErrorState text={error?.message} status={error?.status} />
-      </AppShell>
-    );
-
   return (
     <AppShell>
-      <div className="profile-page">
-        <div className="page-heading-row">
-          <div>
-            <div className="section-kicker">PROFILE</div>
-            <h1>Your career profile</h1>
-            <p>
-              Keep your information up to date so recommendations stay relevant.
-            </p>
-          </div>
-          <button
-            className="btn primary"
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? "Saving..." : "Save changes"}
-          </button>
-        </div>
-        {error && (
-          <p style={{ color: "var(--red)", fontSize: 12 }}>{error.message}</p>
-        )}
-        {savedMsg && (
-          <p style={{ color: "var(--green)", fontSize: 12 }}>{savedMsg}</p>
-        )}
-        <div className="profile-layout" style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '40px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div className="panel" style={{ padding: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <div className="avatar large" style={{ width: 64, height: 64, fontSize: 24 }}>
-                  {(form.localName || "?").charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <h2 style={{ fontSize: 20, margin: '0 0 6px 0', fontWeight: 600 }}>{form.localName || "Your name"}</h2>
-                  <p style={{ margin: 0, fontSize: 14, color: 'var(--text-muted)' }}>
-                    {form.educationStage === "Currently in 12th" ? (
-                      <>12th / Higher Secondary{form.stream ? ` · ${form.stream}` : ""} · {form.educationStatus}</>
-                    ) : form.educationStage === "Higher Education" ? (
-                      <>Higher Education{form.degree ? ` · ${form.degree}` : ""} · {form.educationStatus}</>
-                    ) : (
-                      <>{form.currentRole || "Working Professional"}{form.industry ? ` · ${form.industry}` : ""}</>
-                    )} <br />
-                    <span style={{ display: 'inline-block', marginTop: 4 }}>{joinLocations(form.preferredLocations)}</span>
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="panel" style={{ padding: '24px' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase' }}>CAREER GOAL</div>
-              <h3 style={{ fontSize: 18, marginBottom: 12, marginTop: 0, fontWeight: 600 }}>{form.careerGoal || "Not set"}</h3>
-
-              {form.careerGoal && !careerInfo && (
-                <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: 0 }}>Career details are not yet available.</p>
-              )}
-
-              {careerInfo?.description && (
-                <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 14, lineHeight: 1.5, margin: 0, color: 'var(--text)' }}>{careerInfo.description}</p>
-                </div>
-              )}
-
-              {careerInfo?.qualifications && careerInfo.qualifications.length > 0 && (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>Required education:</div>
-                  <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: 'var(--text-muted)' }}>
-                    {careerInfo.qualifications.map((q, i) => <li key={i} style={{ marginBottom: 4 }}>{q}</li>)}
-                  </ul>
-                </div>
-              )}
-
-              {isValidating && (
-                <div style={{ fontSize: 13, color: "var(--brand)", marginTop: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div className="loading-pulse"><CircleHelp size={14} /></div> Checking career compatibility...
-                </div>
-              )}
-
-              {validationData && !isValidating && (
-                <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--line)' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 12, textTransform: 'uppercase' }}>COMPATIBILITY STATUS</div>
-
-                  <div style={{
-                    padding: '8px 12px',
-                    borderRadius: 6,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    marginBottom: 12,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    border: `1px solid ${['RED', 'INVALID_GOAL'].includes(validationData.classification) ? 'var(--red)' : validationData.classification === 'YELLOW' ? '#eab308' : validationData.classification === 'GREEN' ? 'var(--green)' : 'var(--text-muted)'}`,
-                    background: ['RED', 'INVALID_GOAL'].includes(validationData.classification) ? 'rgba(255,0,0,0.05)' : validationData.classification === 'YELLOW' ? 'rgba(234,179,8,0.05)' : validationData.classification === 'GREEN' ? 'rgba(0,128,0,0.05)' : 'rgba(0,0,0,0.05)',
-                    color: ['RED', 'INVALID_GOAL'].includes(validationData.classification) ? 'var(--red)' : validationData.classification === 'YELLOW' ? '#ca8a04' : validationData.classification === 'GREEN' ? 'var(--green)' : 'var(--text-muted)'
-                  }}>
-                    {validationData.classification === 'INVALID_GOAL' ? <><XCircle size={16} /> Invalid Goal</> :
-                        ['RED', 'INVALID_GOAL'].includes(validationData.classification) ? <><XCircle size={16} /> Career Conflict</> :
-                          validationData.classification === 'YELLOW' ? <><CheckCircle size={16} /> Challenging path, but achievable</> :
-                            validationData.classification === 'NOT_FOUND' ? <><HelpCircle size={16} /> Career not found</> :
-                              validationData.classification === 'UNKNOWN' ? <><HelpCircle size={16} /> Career requirements unavailable</> :
-                                <><CheckCircle size={16} /> Highly aligned</>}
-                  </div>
-
-                  <div style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.5 }}>
-                    {validationData.classification === 'GREEN' && (
-                      <p style={{ margin: 0 }}>{validationData.reason || "Your education provides a strong foundation for this career."}</p>
-                    )}
-                    {validationData.classification === 'YELLOW' && (
-                      <>
-                        <p style={{ margin: '0 0 12px 0' }}>{validationData.reason || "Your current education is not the standard route, but this career can still be pursued with additional preparation."}</p>
-                        {validationData.missing_requirements?.length > 0 && (
-                          <div>
-                            <strong style={{ fontSize: 13, fontWeight: 600 }}>Your next steps:</strong>
-                            <ul style={{ margin: '6px 0 0 0', paddingLeft: 20, color: 'var(--text-muted)' }}>
-                              {validationData.missing_requirements.map((req, idx) => <li style={{ marginBottom: 4 }} key={`req-${idx}`}>{req}</li>)}
-                              {validationData.skill_gaps?.map((gap, idx) => <li style={{ marginBottom: 4 }} key={`gap-${idx}`}>{gap}</li>)}
-                            </ul>
-                          </div>
-                        )}
-                      </>
-                    )}
-                    {validationData.classification === 'INVALID_GOAL' && (
-                      <p style={{ margin: 0 }}>{validationData.reason || "Please enter a valid career or occupation."}</p>
-                    )}
-                    {validationData.classification === 'RED' && (
-                      <>
-                        <p style={{ margin: '0 0 12px 0' }}>{validationData.reason || "Your current educational background does not satisfy the formal prerequisites for this career."}</p>
-                        {validationData.formal_barriers?.length > 0 && (
-                          <div>
-                            <strong style={{ fontSize: 13, fontWeight: 600 }}>Required education:</strong>
-                            <ul style={{ margin: '6px 0 0 0', paddingLeft: 20, color: 'var(--text-muted)' }}>
-                              {validationData.formal_barriers.map((bar, idx) => <li style={{ marginBottom: 4 }} key={`bar-${idx}`}>{bar}</li>)}
-                            </ul>
-                          </div>
-                        )}
-                      </>
-                    )}
-                    {validationData.classification === 'UNKNOWN' && (
-                      <p style={{ margin: 0 }}>This appears to be a recognized career, but we don't have detailed prerequisite rules for it yet.</p>
-                    )}
-                    {validationData.classification === 'NOT_FOUND' && (
-                      <p style={{ margin: 0 }}>We couldn't find this career in the CareerGPS career catalogue.</p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="panel" style={{ padding: '24px' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 20, textTransform: 'uppercase' }}>PROFILE INFORMATION</div>
-
-              <div className="form-grid">
-                <label>
-                  Full name
-                  <input
-                    value={form.localName}
-                    onChange={(e) =>
-                      setForm({ ...form, localName: e.target.value })
-                    }
-                  />
-                </label>
-                <label>
-                  Email
-                  <input value={form.email} readOnly style={{ backgroundColor: 'var(--bg-light)', color: 'var(--text-muted)' }} />
-                </label>
-
-                <label>
-                  What best describes you?
-                  <select value={form.educationStage} onChange={handleEducationStageChange}>
-                    <option>Currently in 12th</option>
-                    <option>Higher Education</option>
-                    <option>Working Professional</option>
-                  </select>
-                </label>
-
-                {form.educationStage === "Working Professional" ? (
-                  <>
-                    <label>
-                      Industry / Field
-                      <select value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })}>
-                        <option value="">Select Industry</option>
-                        <option>Engineering / Technology</option>
-                        <option>Finance & Accounting</option>
-                        <option>Business / Management</option>
-                        <option>Healthcare</option>
-                        <option>Education</option>
-                        <option>Marketing / Sales</option>
-                        <option>Design / Creative</option>
-                        <option>Legal</option>
-                        <option>Government / Public Sector</option>
-                        <option>Hospitality / Tourism</option>
-                        <option>Manufacturing</option>
-                        <option>Other</option>
-                      </select>
-                    </label>
-                    <label>
-                      Current Role / Job Title
-                      <input placeholder="e.g. Software Developer" value={form.currentRole} onChange={(e) => setForm({ ...form, currentRole: e.target.value })} />
-                    </label>
-                    <label>
-                      Years of Experience
-                      <select value={form.professionalExperience} onChange={(e) => setForm({ ...form, professionalExperience: e.target.value })}>
-                        <option value="">Select Experience</option>
-                        <option>Less than 1 year</option>
-                        <option>1–2 years</option>
-                        <option>3–5 years</option>
-                        <option>5–10 years</option>
-                        <option>10+ years</option>
-                      </select>
-                    </label>
-                  </>
-                ) : (
-                  <>
-                    <label>
-                      12th Stream
-                      <select value={form.stream} onChange={(e) => setForm({ ...form, stream: e.target.value })}>
-                        <option value="">Select Stream</option>
-                        <option>Science</option>
-                        <option>Science — PCM</option>
-                        <option>Science — PCB</option>
-                        <option>Science — PCMB</option>
-                        <option>Commerce</option>
-                        <option>Arts / Humanities</option>
-                        <option>Vocational</option>
-                      </select>
-                    </label>
-
-                    {form.educationStage === "Higher Education" && (
-                      <>
-                        <label>
-                          Current Education / Program
-                          {programsLoading ? (
-                            <div style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: 14, background: 'var(--bg-light)', borderRadius: 6, border: '1px solid var(--line)' }}>Loading programs...</div>
-                          ) : (
-                            <select value={form.degree} onChange={(e) => setForm({ ...form, degree: e.target.value })}>
-                              <option value="">Select Program</option>
-                              {availablePrograms.map(p => <option key={p} value={p}>{p}</option>)}
-                              {availablePrograms.length === 0 && !form.stream && <option disabled>Select 12th Stream first</option>}
-                              {availablePrograms.length === 0 && form.stream && <option disabled>No eligible bachelor's programs found for the selected subjects.</option>}
-                            </select>
-                          )}
-                        </label>
-                        <label>
-                          Status
-                          <select value={form.educationStatus} onChange={(e) => setForm({ ...form, educationStatus: e.target.value })}>
-                            <option>Pursuing</option>
-                            <option>Completed</option>
-                          </select>
-                        </label>
-                      </>
-                    )}
-                  </>
-                )}
-
-                <label style={{ gridColumn: '1 / -1' }}>
-                  Experience
-                  <textarea
-                    value={form.experienceText}
-                    onChange={(e) => setForm({ ...form, experienceText: e.target.value })}
-                    placeholder="Projects, internships, work experience..."
-                    style={{ minHeight: '100px', resize: 'vertical' }}
-                  />
-                </label>
-
-                <label style={{ gridColumn: '1 / -1' }}>
-                  Career goal
-                  <input
-                    value={form.careerGoal}
-                    onChange={(e) => {
-                      setForm({ ...form, careerGoal: e.target.value, careerId: null });
-                      if (validationData) setValidationData(null);
-                      setCareerInfo(null);
-                    }}
-                    placeholder="e.g. Software Engineer"
-                  />
-                </label>
-
-                <label style={{ gridColumn: '1 / -1' }}>
-                  Preferred location
-                  <select
-                    value={joinLocations(form.preferredLocations)}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        preferredLocations: parseLocations(e.target.value),
-                      })
-                    }
-                  >
-                    <option>Goa + Remote</option>
-                    <option>Goa</option>
-                    <option>Pan India</option>
-                    <option>Remote</option>
-                  </select>
-                </label>
-
-                <div style={{ gridColumn: '1 / -1', marginTop: '16px' }} className="mobile-only-save">
-                  <button className="btn primary" onClick={handleSave} disabled={saving} style={{ width: '100%', padding: '12px', fontSize: '14px' }}>
-                    {saving ? "Saving..." : "Save changes"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="panel" style={{ height: 'fit-content', padding: '24px' }}>
-            <h2 style={{ fontSize: 16, margin: '0 0 16px 0' }}>Skills &amp; interests</h2>
-            {skillsLoading && <LoadingState label="Loading skills..." />}
-            {skillsError && !skillsLoading && (
-              <p style={{ color: "var(--red)", fontSize: 12 }}>
-                Could not load skill catalogue: {skillsError}
-              </p>
-            )}
-            {!skillsLoading && !skillsError && allSkills.length === 0 && (
-              <p className="muted" style={{ fontSize: 14 }}>
-                No skills are published in the CareerGPS database yet.
-              </p>
-            )}
-            {!skillsLoading && allSkills.length > 0 && (
-              <div>
-                <SkillPicker
-                  userSkillIds={userSkillIds}
-                  selectedSkills={Array.from(userSkillIds).map(id => allSkills.find(s => s.id === id) || customSkills.find(s => s.id === id)).filter(Boolean)}
-                  toggleSkill={(sk) => toggleSkill(sk)}
-                  careerGoal={form.careerGoal}
-                  educationContext={form.educationStage + (form.degree ? ` ${form.degree}` : '')}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-      </div>
+      <ProfilePage user={user} refreshUser={refreshUser} />
     </AppShell>
   );
 }
@@ -5868,7 +5505,7 @@ function AssistantPage() {
         message: text,
       });
       const data = unwrapObject(res);
-      console.debug("[CareerGPS Assistant]", {
+      console.debug("[NaviGoa Assistant]", {
         conversationId: data.conversation_id,
         requestStatus: "success",
       });
@@ -5879,12 +5516,12 @@ function AssistantPage() {
         .then((r) => setConversations(unwrapList(r)))
         .catch(() => { });
     } catch (err) {
-      console.debug("[CareerGPS Assistant]", {
+      console.debug("[NaviGoa Assistant]", {
         conversationId,
         requestStatus: "error",
         responseStatus: err.status || "network",
       });
-      let msg = "Unable to connect to the CareerGPS backend.";
+      let msg = "Unable to connect to the NaviGoa backend.";
       if (err.status === 401)
         msg = "Your session has expired. Please log in again.";
       else if (err.status === 403)
@@ -5893,7 +5530,7 @@ function AssistantPage() {
       else if (err.status === 429)
         msg = "Too many requests. Please try again shortly.";
       else if (err.status >= 500)
-        msg = "CareerGPS couldn't process that request. Please try again.";
+        msg = "NaviGoa couldn't process that request. Please try again.";
       else if (err.message) msg = err.message;
       setError(new Error(msg));
     } finally {
@@ -5916,10 +5553,10 @@ function AssistantPage() {
         <div className="page-heading-row">
           <div>
             <div className="section-kicker">AI ASSISTANT</div>
-            <h1>CareerGPS Assistant</h1>
+            <h1>NaviGoa Assistant</h1>
             <p>
               Ask about careers, pathways, courses and opportunities in Goa.
-              Answers are grounded in CareerGPS data.
+              Answers are grounded in NaviGoa data.
             </p>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -6008,7 +5645,7 @@ function AssistantPage() {
                   <Sparkles size={22} />
                   <p>
                     Ask me about careers, courses, pathways or opportunities
-                    available through CareerGPS. I'll use CareerGPS data rather
+                    available through NaviGoa. I'll use NaviGoa data rather
                     than guessing.
                   </p>
                 </div>
@@ -6839,9 +6476,9 @@ function Saved() {
 }
 
 const SITE_URL = import.meta.env.VITE_SITE_URL || "https://careergpsgoa.in";
-const BRAND = "CareerGPS";
+const BRAND = "NaviGoa";
 const DEFAULT_DESCRIPTION =
-  "CareerGPS helps people in Goa explore careers, understand requirements, find learning pathways and discover opportunities using structured, source-backed career information.";
+  "NaviGoa helps people in Goa explore careers, understand requirements, find learning pathways and discover opportunities using structured, source-backed career information.";
 
 function Seo({
   title,
@@ -6888,7 +6525,7 @@ function Seo({
     setMeta("og:image", new URL("/og-image.jpg", SITE_URL).href, true);
     setMeta(
       "og:image:alt",
-      "CareerGPS logo with the Explore, Plan, Learn, Grow tagline",
+      "NaviGoa logo with the Navigate, Build, Grow tagline",
       true,
     );
     setMeta("twitter:card", "summary_large_image");
@@ -6909,7 +6546,7 @@ function Seo({
         "@id": `${SITE_URL}/#organization`,
         name: BRAND,
         url: SITE_URL,
-        logo: new URL("/careergps-logo.jpg", SITE_URL).href,
+        logo: new URL("/navigoa-logo.jpg", SITE_URL).href,
         areaServed: { "@type": "AdministrativeArea", name: "Goa, India" },
       },
       {
@@ -6986,36 +6623,36 @@ function SeoRouter() {
   if (isDetailPage) return null;
   const data = {
     "/": {
-      title: "CareerGPS | Explore, Plan, Learn, Grow in Goa",
+      title: "NaviGoa | Navigate, Build, Grow in Goa",
       description: DEFAULT_DESCRIPTION,
       path: "/",
     },
     "/signup": {
-      title: "Create Your CareerGPS Account | Goa Career Platform",
+      title: "Create Your NaviGoa Account | Goa Career Platform",
       description:
-        "Create a CareerGPS account to build your profile and explore career pathways, skills and opportunities.",
+        "Create a NaviGoa account to build your profile and explore career pathways, skills and opportunities.",
       path,
     },
     "/login": {
-      title: "Log In | CareerGPS",
+      title: "Log In | NaviGoa",
       description:
-        "Log in to your CareerGPS account and continue your career pathway.",
+        "Log in to your NaviGoa account and continue your career pathway.",
       path,
     },
     "/onboarding": {
-      title: "Set Up Your Career Profile | CareerGPS",
+      title: "Set Up Your Career Profile | NaviGoa",
       description:
-        "Set up your education, skills, interests and career preferences for a personalized CareerGPS experience.",
+        "Set up your education, skills, interests and career preferences for a personalized NaviGoa experience.",
       path,
     },
     "/dashboard": {
-      title: "Career Dashboard | CareerGPS",
+      title: "Career Dashboard | NaviGoa",
       description:
         "Review your career goal, pathway progress, saved careers and recommended next steps.",
       path,
     },
     "/careers": {
-      title: "Explore Careers in Goa | CareerGPS",
+      title: "Explore Careers in Goa | NaviGoa",
       description:
         "Search careers by keyword, then explore pathways, skills and requirements.",
       path,
@@ -7025,7 +6662,7 @@ function SeoRouter() {
       ],
     },
     "/skill-gap": {
-      title: "Skill Gap Check | CareerGPS",
+      title: "Skill Gap Check | NaviGoa",
       description:
         "Compare your saved skills profile with what a career typically requires.",
       path,
@@ -7036,7 +6673,7 @@ function SeoRouter() {
       ],
     },
     "/eligibility": {
-      title: "Opportunity Eligibility Check | CareerGPS",
+      title: "Opportunity Eligibility Check | NaviGoa",
       description:
         "Compare your profile with an opportunity's structured requirements and identify items that need verification.",
       path,
@@ -7047,7 +6684,7 @@ function SeoRouter() {
       ],
     },
     "/pathway": {
-      title: "Personal Career Pathway | CareerGPS",
+      title: "Personal Career Pathway | NaviGoa",
       description:
         "Follow a step-by-step learning and experience pathway toward a target career.",
       path,
@@ -7057,7 +6694,7 @@ function SeoRouter() {
       ],
     },
     "/opportunities": {
-      title: "Jobs, Internships & Programmes in Goa | CareerGPS",
+      title: "Jobs, Internships & Programmes in Goa | NaviGoa",
       description:
         "Explore career opportunities and review requirements and source information before applying.",
       path,
@@ -7067,7 +6704,7 @@ function SeoRouter() {
       ],
     },
     "/institutions": {
-      title: "Institutions & Courses in Goa | CareerGPS",
+      title: "Institutions & Courses in Goa | NaviGoa",
       description:
         "Explore institutions and courses that can help close career skill and qualification gaps.",
       path,
@@ -7077,7 +6714,7 @@ function SeoRouter() {
       ],
     },
     "/learn": {
-      title: "Learning Resources & Courses | CareerGPS",
+      title: "Learning Resources & Courses | NaviGoa",
       description:
         "Find learning options connected to career pathways and skill development.",
       path,
@@ -7087,20 +6724,30 @@ function SeoRouter() {
       ],
     },
     "/profile": {
-      title: "Career Profile | CareerGPS",
+      title: "Career Profile | NaviGoa",
       description:
         "Manage your education, skills, interests and career preferences.",
       path,
     },
     "/saved": {
-      title: "Saved Careers | CareerGPS",
+      title: "Saved Careers | NaviGoa",
       description:
         "Review careers you saved for later and continue exploring their pathways.",
       path,
     },
+    "/projects": {
+      title: "Projects & Portfolio Studio | NaviGoa",
+      description:
+        "Apply your pathway learning to real-world deliverables, build verified project evidence, and showcase your portfolio.",
+      path,
+      breadcrumbs: [
+        { name: "Home", path: "/" },
+        { name: "Projects & Studio", path },
+      ],
+    },
   }[path] || {
-    title: "Page Not Found | CareerGPS",
-    description: "The CareerGPS page you requested could not be found.",
+    title: "Page Not Found | NaviGoa",
+    description: "The NaviGoa page you requested could not be found.",
     path,
     breadcrumbs: [{ name: "Home", path: "/" }],
   };
@@ -7117,7 +6764,7 @@ function NotFound() {
         <p>The page may have moved or the address may be incorrect.</p>
         <div className="not-found-actions">
           <Link className="btn primary" to="/">
-            Go to CareerGPS home <ArrowRight size={16} />
+            Go to NaviGoa home <ArrowRight size={16} />
           </Link>
           <Link className="btn outline" to="/careers">
             Explore careers
@@ -7153,6 +6800,8 @@ function App() {
           <Route path="/learn" element={<Learn />} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/saved" element={<ProtectedRoute><Saved /></ProtectedRoute>} />
+          <Route path="/projects" element={<ProtectedRoute><ProjectsStudio /></ProtectedRoute>} />
+          <Route path="/portfolio/p/:shareSlug" element={<PublicPortfolioPage />} />
           <Route path="/recommendations" element={<ProtectedRoute><RecommendationsPage /></ProtectedRoute>} />
           <Route path="/assistant" element={<ProtectedRoute><AssistantPage /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />

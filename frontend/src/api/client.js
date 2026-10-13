@@ -89,7 +89,7 @@ export class ApiError extends Error {
  * backend didn't send its own message (e.g. a network failure never
  * reaches errorHandler.js at all). */
 function fallbackMessage(status, isNetworkError) {
-  if (isNetworkError) return "Unable to connect to CareerGPS. Check that the backend is running and reachable.";
+  if (isNetworkError) return "Unable to connect to NaviGoa. Check that the backend is running and reachable.";
   switch (status) {
     case 401: return "Your session has expired. Please log in again.";
     case 403: return "You don't have permission to access this resource.";
@@ -105,17 +105,17 @@ function fallbackMessage(status, isNetworkError) {
 async function request(path, options = {}) {
   const token = getToken();
   const controller = new AbortController();
+  const externalSignal = options.signal;
+  const relayExternalAbort = () => controller.abort();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  if (options.signal) {
-    if (options.signal.aborted) {
-      controller.abort();
-    } else {
-      options.signal.addEventListener('abort', () => controller.abort());
-    }
+  if (externalSignal) {
+    if (externalSignal.aborted) controller.abort();
+    else externalSignal.addEventListener("abort", relayExternalAbort, { once: true });
   }
 
   let response;
+  let payload = null;
   try {
     response = await fetch(`${API_BASE}${path}`, {
       ...options,
@@ -126,30 +126,31 @@ async function request(path, options = {}) {
         ...(options.headers || {})
       }
     });
-  } catch (networkErr) {
-    clearTimeout(timeout);
-    const isAbort = networkErr.name === "AbortError";
-    const isManualAbort = options.signal && options.signal.aborted;
-    
-    if (isManualAbort) {
-      throw new ApiError("Request cancelled.", { status: 0, code: "CANCELLED", isNetworkError: true, isManualAbort: true });
+
+    if (response.status !== 204) {
+      const bodyText = await response.text();
+      if (bodyText) {
+        try { payload = JSON.parse(bodyText); } catch { /* non-JSON body */ }
+      }
     }
-    throw new ApiError(fallbackMessage(0, !isAbort), { status: 0, code: isAbort ? "TIMEOUT" : "NETWORK_ERROR", isNetworkError: true });
+  } catch (networkErr) {
+    const isAbort = networkErr?.name === "AbortError";
+    const isManualAbort = Boolean(externalSignal?.aborted);
+    if (isManualAbort) {
+      throw new ApiError("Request cancelled.", { status: 0, code: "CANCELLED", isNetworkError: true });
+    }
+    throw new ApiError(
+      fallbackMessage(0, !isAbort),
+      { status: 0, code: isAbort ? "TIMEOUT" : "NETWORK_ERROR", isNetworkError: true }
+    );
+  } finally {
+    clearTimeout(timeout);
+    externalSignal?.removeEventListener("abort", relayExternalAbort);
   }
-  clearTimeout(timeout);
 
   if (response.status === 204) return null;
-
-  let payload = null;
-  const text = await response.text();
-  if (text) {
-    try { payload = JSON.parse(text); } catch { /* non-JSON body */ }
-  }
-
   if (!response.ok) {
-    if (response.status === 401) {
-      clearToken();
-    }
+    if (response.status === 401) clearToken();
     const backendError = payload?.error;
     throw new ApiError(
       backendError?.message || fallbackMessage(response.status, false),
@@ -163,6 +164,7 @@ async function request(path, options = {}) {
 const get = (path, opts = {}) => request(path, { method: "GET", ...opts });
 const post = (path, body, opts = {}) => request(path, { method: "POST", body: body !== undefined ? JSON.stringify(body) : undefined, ...opts });
 const put = (path, body, opts = {}) => request(path, { method: "PUT", body: JSON.stringify(body), ...opts });
+const patch = (path, body, opts = {}) => request(path, { method: "PATCH", body: body !== undefined ? JSON.stringify(body) : undefined, ...opts });
 const del = (path, opts = {}) => request(path, { method: "DELETE", ...opts });
 
 export const api = {
@@ -184,6 +186,7 @@ export const api = {
 
   // --- Education (src/modules/education) --------------------------------
   educationPrograms: (stream) => get(`/education/programs?stream=${encodeURIComponent(stream || "")}`),
+  masterPrograms: (bachelors) => get(`/education/master-programs?bachelors=${encodeURIComponent(bachelors || "")}`),
   validateProgram: (body) => post(`/education/validate`, body),
 
   // --- Careers (src/modules/careers, public) --------------------------
@@ -196,7 +199,7 @@ export const api = {
   careerCourses: (id) => get(`/careers/${id}/courses`),
   careerPathways: (id) => get(`/careers/${id}/pathways`),
   careerOpportunities: (id) => get(`/careers/${id}/opportunities`),
-  careerRelated: (id) => get(`/careers/${id}/related`),
+  careerRelated: (id, params = {}, opts = {}) => get(`/careers/${id}/related${buildQuery(params)}`, opts),
   careerSources: (id) => get(`/careers/${id}/sources`),
 
   // --- AI Careers (src/modules/careers/ai-career.routes.js) ------------
@@ -219,6 +222,7 @@ export const api = {
   // This is the backend's real "is this career for me" capability - there is
   // no generic /careers/:id/eligibility route.
   gapAnalysis: (body) => post("/skills/gap-analysis", body),
+  skillDetail: (skillId, params = {}, opts = {}) => get(`/skills/${skillId}/detail${buildQuery(params)}`, opts),
 
   // --- Recommendations (src/modules/recommendations) -------------------
   // POST /recommendations/careers body: { goal?, preferred_locations?, constraints? }
@@ -249,6 +253,14 @@ export const api = {
   // GET/POST accept either the user_pathway id OR the template pathway_id.
   pathwayProgress: (idOrPathwayId) => get(`/pathways/${idOrPathwayId}/progress`),
   updatePathwayProgress: (idOrPathwayId, steps) => post(`/pathways/${idOrPathwayId}/progress`, { steps }),
+  skipPathwayStep: (pathwayId, stepId) => post(`/pathways/${pathwayId}/steps/${stepId}/skip`),
+  undoPathwayStep: (pathwayId, stepId) => post(`/pathways/${pathwayId}/steps/${stepId}/undo`),
+  completePathway: (pathwayId, body = {}) => post(`/pathways/${pathwayId}/complete`, body),
+  completePathwayStep: (pathwayId, stepId, notes = null) => {
+    if (!stepId) return post(`/pathways/${pathwayId}/complete`, { notes });
+    return post(`/pathways/${pathwayId}/steps/${stepId}/complete`, { notes });
+  },
+  deleteUserPathway: (pathwayId) => del(`/pathways/${pathwayId}`),
   // Save/unsave a *template* pathway (saved_items table). There is no
   // equivalent for saving a plain career - see docs/API-INTEGRATION-MAP.md.
   savePathway: (pathwayId) => post(`/pathways/${pathwayId}/save`),
@@ -284,5 +296,28 @@ export const api = {
   assistantChat: (body) => post("/assistant/chat", body),
   assistantConversations: () => get("/assistant/conversations"),
   assistantConversation: (id) => get(`/assistant/conversations/${id}`),
-  deleteAssistantConversation: (id) => del(`/assistant/conversations/${id}`)
+  deleteAssistantConversation: (id) => del(`/assistant/conversations/${id}`),
+
+  // --- Projects & Portfolio Studio (src/modules/projects) ---------------
+  projectRecommendations: (params = {}, opts = {}) => get(`/projects/recommendations${buildQuery(params)}`, opts),
+  myProjects: (params = {}, opts = {}) => get(`/projects/my${buildQuery(params)}`, opts),
+  projectDetails: (id, opts = {}) => get(`/projects/${id}`, opts),
+  startProject: (body, opts = {}) => post("/projects/start", body, opts),
+  updateProjectTask: (id, body, opts = {}) => patch(`/projects/${id}/tasks`, body, opts),
+  addProjectDeliverable: (id, body, opts = {}) => post(`/projects/${id}/deliverables`, body, opts),
+  removeProjectDeliverable: (id, index, opts = {}) => del(`/projects/${id}/deliverables/${index}`, opts),
+  submitProject: (id, body, opts = {}) => post(`/projects/${id}/submit`, body, opts),
+  updateProjectStatus: (id, body, opts = {}) => patch(`/projects/${id}/status`, body, opts),
+
+  // --- Portfolio (src/modules/projects/portfolio) -----------------------
+  myPortfolio: (opts = {}) => get("/portfolio/me", opts),
+  updateMyPortfolio: (body, opts = {}) => patch("/portfolio/me", body, opts),
+  publicPortfolio: (shareSlug, opts = {}) => get(`/portfolio/public/${shareSlug}`, opts),
+
+  // --- Notifications (src/modules/notifications, authenticated) ----------
+  notifications: (params = {}, opts = {}) => get(`/notifications${buildQuery(params)}`, opts),
+  unreadNotificationCount: (opts = {}) => get("/notifications/unread-count", opts),
+  markNotificationRead: (id, opts = {}) => patch(`/notifications/${id}/read`, {}, opts),
+  markAllNotificationsRead: (opts = {}) => post("/notifications/mark-all-read", {}, opts),
+  triggerClosingSoonCheck: (opts = {}) => post("/notifications/check-closing-soon", {}, opts)
 };

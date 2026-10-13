@@ -1,0 +1,87 @@
+{
+  "purpose": "Suggested public Lever job boards for initial admin review. These are candidate source records, not automatically approved or guaranteed to remain active. Add them through the CareerGPS admin source registry, verify the employer's current public careers page and applicable access rules, then approve only the sources you intend to ingest.",
+  "checked_at": "2026-10-11",
+  "sources": [
+    {
+      "name": "Drivetrain public careers board",
+      "source_type": "private_careers",
+      "base_url": "https://jobs.lever.co/drivetrain",
+      "organization": "Drivetrain",
+      "is_approved": false,
+      "access_notes": "{\"worker\":{\"max_pages\":10,\"max_candidates\":100,\"max_depth\":1,\"delay_ms\":1200}}",
+      "review_notes": "Public Lever board with private roles and internships; verify current listing and source policy before approval."
+    },
+    {
+      "name": "Paytm public careers board",
+      "source_type": "private_careers",
+      "base_url": "https://jobs.lever.co/paytm",
+      "organization": "Paytm",
+      "is_approved": false,
+      "access_notes": "{\"worker\":{\"max_pages\":10,\"max_candidates\":100,\"max_depth\":1,\"delay_ms\":1200}}",
+      "review_notes": "Public Lever board with roles and internships; verify current listing and source policy before approval."
+    },
+    {
+      "name": "Paytm Payments Services public careers board",
+      "source_type": "private_careers",
+      "base_url": "https://jobs.lever.co/paytmpayments",
+      "organization": "Paytm Payments Services",
+      "is_approved": false,
+      "access_notes": "{\"worker\":{\"max_pages\":10,\"max_candidates\":100,\"max_depth\":1,\"delay_ms\":1200}}",
+      "review_notes": "Public Lever board with private roles and internships; verify current listing and source policy before approval."
+    },
+    {
+      "name": "Aleph public careers board",
+      "source_type": "private_careers",
+      "base_url": "https://jobs.lever.co/aleph",
+      "organization": "Aleph",
+      "is_approved": false,
+      "access_notes": "{\"worker\":{\"max_pages\":10,\"max_candidates\":100,\"max_depth\":1,\"delay_ms\":1200}}",
+      "review_notes": "Public Lever board with roles and internships; verify current listing and source policy before approval."
+    },
+    {
+      "name": "Sprinto public careers board",
+      "source_type": "private_careers",
+      "base_url": "https://jobs.lever.co/Sprinto",
+      "organization": "Sprinto",
+      "is_approved": false,
+      "access_notes": "{\"worker\":{\"max_pages\":10,\"max_candidates\":100,\"max_depth\":1,\"delay_ms\":1200}}",
+      "review_notes": "Public Lever board with roles and internships, including remote roles shown on the board at review time; verify each current posting."
+    },
+    {
+      "name": "Weekday public careers board",
+      "source_type": "private_careers",
+      "base_url": "https://jobs.lever.co/weekdayworks",
+      "organization": "Weekday",
+      "is_approved": false,
+      "access_notes": "{\"worker\":{\"max_pages\":10,\"max_candidates\":100,\"max_depth\":1,\"delay_ms\":1200}}",
+      "review_notes": "Public Lever board with jobs and internships; this is an employer board, not a guarantee of third-party vacancies. Verify current listings."
+    },
+    {
+      "name": "Dun & Bradstreet public careers board",
+      "source_type": "private_careers",
+      "base_url": "https://jobs.lever.co/dnb",
+      "organization": "Dun & Bradstreet",
+      "is_approved": false,
+      "access_notes": "{\"worker\":{\"max_pages\":10,\"max_candidates\":100,\"max_depth\":1,\"delay_ms\":1200}}",
+      "review_notes": "Public Lever board with India roles and internships shown at review time; verify current postings and source policy."
+    },
+    {
+      "name": "Smarsh public careers board",
+      "source_type": "private_careers",
+      "base_url": "https://jobs.lever.co/smarsh",
+      "organization": "Smarsh",
+      "is_approved": false,
+      "access_notes": "{\"worker\":{\"max_pages\":10,\"max_candidates\":100,\"max_depth\":1,\"delay_ms\":1200}}",
+      "review_notes": "Public Lever board with India roles/internships shown at review time; verify each current posting."
+    },
+    {
+      "name": "Ninja Van public careers board",
+      "source_type": "private_careers",
+      "base_url": "https://jobs.lever.co/ninjavan",
+      "organization": "Ninja Van",
+      "is_approved": false,
+      "access_notes": "{\"worker\":{\"max_pages\":10,\"max_candidates\":100,\"max_depth\":1,\"delay_ms\":1200}}",
+      "review_notes": "Public Lever board with an India software internship listing shown at review time; verify current posting and source policy."
+    }
+  ]
+}

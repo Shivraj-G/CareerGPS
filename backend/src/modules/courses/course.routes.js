@@ -33,4 +33,24 @@ router.get('/:courseId/eligibility', async (req, res, next) => {
     res.json({ data: result.rows });
   } catch (e) { next(e); }
 });
+import { evaluateCourseEligibility } from './course.eligibility.js';
+import { authenticate } from '../../middleware/authenticate.js';
+
+router.get('/:courseId/check-eligibility', authenticate, async (req, res, next) => {
+  try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'You must be logged in to check eligibility.' } });
+
+    const courseRes = await pool.query(`SELECT id, title, course_type, qualification FROM courses WHERE id = $1`, [req.params.courseId]);
+    if (!courseRes.rows[0]) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Course not found.' } });
+    
+    const profileRes = await pool.query(`SELECT education FROM user_profiles WHERE user_id = $1`, [user.id]);
+    const profile = profileRes.rows[0] || { education: [] };
+
+    const evaluation = evaluateCourseEligibility(courseRes.rows[0], profile);
+    
+    res.json({ data: evaluation });
+  } catch (e) { next(e); }
+});
+
 export default router;

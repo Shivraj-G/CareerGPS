@@ -1,35 +1,87 @@
 import { pool } from '../../config/database.js';
 import { env } from '../../config/env.js';
-import { validateProgramCompatibility } from '../education/education.service.js';
+import { validateProgramCompatibility, normalizeStream } from '../education/education.service.js';
+import { evaluateGoalEligibility } from '../goals/goal.engine.js';
 
 export async function getProfile(userId) {
+  if (!userId) return null;
   const result = await pool.query(
     `SELECT up.id, up.education, up.experience, up.interests, up.preferred_locations,
-            up.career_goal, up.career_id, up.constraints, up.profile_status, up.created_at, up.updated_at,
+            up.career_goal, up.current_goal, up.career_id, up.constraints, up.profile_status,
+            COALESCE(up.full_name, u.full_name) AS full_name,
+            up.created_at, up.updated_at,
             COALESCE((SELECT jsonb_agg(jsonb_build_object(
               'name', s.name, 'level', us.level, 'years_experience', us.years_experience,
               'verified', us.verified
             ) ORDER BY s.name) FROM user_skills us JOIN skills s ON s.id = us.skill_id WHERE us.user_id = up.user_id), '[]'::jsonb) AS skills
-     FROM user_profiles up WHERE up.user_id = $1`, [userId]
+     FROM user_profiles up
+     LEFT JOIN users u ON u.id = up.user_id
+     WHERE up.user_id = $1`, [userId]
   );
-  return result.rows[0] ?? null;
+  if (result.rows[0]) return result.rows[0];
+
+  // Auto-provision a draft profile row if user exists but has no profile row yet
+  try {
+    const userCheck = await pool.query('SELECT id, full_name FROM users WHERE id = $1', [userId]);
+    if (!userCheck.rows[0]) return null;
+
+    const inserted = await pool.query(
+      `INSERT INTO user_profiles (user_id, profile_status, full_name)
+       VALUES ($1, 'draft', $2)
+       ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()
+       RETURNING id, education, experience, interests, preferred_locations, career_goal, current_goal, career_id, constraints, profile_status, full_name, created_at, updated_at`,
+      [userId, userCheck.rows[0].full_name || null]
+    );
+    return {
+      ...inserted.rows[0],
+      education: inserted.rows[0].education || [],
+      experience: inserted.rows[0].experience || [],
+      interests: inserted.rows[0].interests || [],
+      preferred_locations: inserted.rows[0].preferred_locations || [],
+      skills: []
+    };
+  } catch {
+    const retry = await pool.query(
+      `SELECT up.id, up.education, up.experience, up.interests, up.preferred_locations,
+              up.career_goal, up.current_goal, up.career_id, up.constraints, up.profile_status,
+              COALESCE(up.full_name, u.full_name) AS full_name,
+              up.created_at, up.updated_at,
+              '[]'::jsonb AS skills
+       FROM user_profiles up
+       LEFT JOIN users u ON u.id = up.user_id
+       WHERE up.user_id = $1`, [userId]
+    );
+    return retry.rows[0] ?? null;
+  }
 }
 
 export async function updateProfile(userId, input) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const existing = await client.query('SELECT id FROM user_profiles WHERE user_id = $1 FOR UPDATE', [userId]);
+    const existing = await client.query('SELECT id, profile_status, education FROM user_profiles WHERE user_id = $1 FOR UPDATE', [userId]);
     if (!existing.rows[0]) {
       const error = new Error('Profile not found.'); error.statusCode = 404; error.code = 'PROFILE_NOT_FOUND'; throw error;
     }
+    const existingRow = existing.rows[0];
+    const isLocked = existingRow.profile_status === 'complete' && Array.isArray(existingRow.education) && existingRow.education.length > 0;
 
     const fields = [];
     const values = [];
     const add = (column, value) => { fields.push(`${column} = $${values.length + 1}`); values.push(value); };
     if (input.education !== undefined) {
+      if (isLocked) {
+        const error = new Error('Education details are set during onboarding and cannot be modified.');
+        error.statusCode = 403;
+        error.code = 'EDUCATION_LOCKED';
+        throw error;
+      }
+
       for (const edu of input.education) {
-        if (edu.education_stage === 'HIGHER_EDUCATION' || edu.level === 'Undergraduate' || edu.level === 'Postgraduate') {
+        if (edu.school_12_stream) edu.school_12_stream = normalizeStream(edu.school_12_stream);
+        if (edu.stream) edu.stream = normalizeStream(edu.stream);
+
+        if ((edu.education_stage === 'HIGHER_EDUCATION' || edu.level === 'Undergraduate') && edu.level !== 'Postgraduate') {
            const stream = edu.school_12_stream || edu.stream;
            const program = edu.current_program || edu.degree;
            if (stream && program) {
@@ -48,44 +100,30 @@ export async function updateProfile(userId, input) {
     if (input.interests !== undefined) add('interests', JSON.stringify(input.interests));
     if (input.preferred_locations !== undefined) add('preferred_locations', JSON.stringify(input.preferred_locations));
     if (input.career_goal !== undefined) {
-      if (input.career_goal && env.AI_SERVICE_URL) {
-        try {
-          const profileData = await getProfile(userId);
-          const aiController = new AbortController();
-          const aiTimeout = setTimeout(() => aiController.abort(), 8000);
-          try {
-            const aiRes = await fetch(`${env.AI_SERVICE_URL}/internal/v1/profiles/validate-goal`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'x-internal-service-token': env.INTERNAL_SERVICE_TOKEN },
-              body: JSON.stringify({
-                goal: input.career_goal,
-                profile: profileData,
-                skills: profileData?.skills || [],
-                careers: []
-              }),
-              signal: aiController.signal
-            });
-            if (aiRes.ok) {
-              const aiData = await aiRes.json();
-              if (aiData.classification === 'INVALID_GOAL' || aiData.classification === 'RED') {
-                const err = new Error(aiData.reason || 'Please enter a valid career or occupation goal.');
-                err.statusCode = 422;
-                err.code = aiData.classification;
-                throw err;
-              }
-            }
-          } finally {
-            clearTimeout(aiTimeout);
-          }
-        } catch (err) {
-          if (['INVALID_GOAL', 'RED'].includes(err.code)) throw err;
-          // AI validation failure is non-fatal — log and continue saving
-          import('../../utils/logger.js').then(({ logger }) =>
-            logger.warn('[profile.service] Goal validation failed silently', { message: err.message })
-          ).catch(() => {});
-        }
-      }
       add('career_goal', input.career_goal);
+      
+      const profileData = await getProfileWithClient(client, userId);
+      const evalResult = input.career_goal ? evaluateGoalEligibility(profileData, { title: input.career_goal }) : null;
+      
+      const currentGoalObj = input.career_goal ? {
+        entity_type: 'Career',
+        title: input.career_goal,
+        status: 'Active',
+        timestamp: new Date().toISOString(),
+        eligibility: evalResult ? {
+          state: evalResult.status,
+          decision: evalResult.decision,
+          action: evalResult.action
+        } : null
+      } : null;
+      
+      add('current_goal', currentGoalObj ? JSON.stringify(currentGoalObj) : null);
+    }
+    const fullNameValue = input.full_name !== undefined ? input.full_name : input.name;
+    if (fullNameValue !== undefined) {
+      const cleanName = fullNameValue ? fullNameValue.trim() : null;
+      add('full_name', cleanName);
+      await client.query('UPDATE users SET full_name = $1, updated_at = NOW() WHERE id = $2', [cleanName, userId]);
     }
     if (input.career_id !== undefined) add('career_id', input.career_id);
     if (input.constraints !== undefined) add('constraints', JSON.stringify(input.constraints));
@@ -140,7 +178,7 @@ export async function updateProfile(userId, input) {
     }
 
     const profile = await getProfileWithClient(client, userId);
-    const complete = Boolean(
+    const complete = existingRow.profile_status === 'complete' || Boolean(
       profile.education?.length && profile.skills?.length &&
       profile.preferred_locations?.length && profile.career_goal
     );
@@ -156,10 +194,14 @@ export async function updateProfile(userId, input) {
 async function getProfileWithClient(client, userId) {
   const result = await client.query(
     `SELECT up.id, up.education, up.experience, up.interests, up.preferred_locations,
-            up.career_goal, up.career_id, up.constraints, up.profile_status, up.created_at, up.updated_at,
+            up.career_goal, up.current_goal, up.career_id, up.constraints, up.profile_status,
+            COALESCE(up.full_name, u.full_name) AS full_name,
+            up.created_at, up.updated_at,
             COALESCE((SELECT jsonb_agg(jsonb_build_object('name', s.name, 'level', us.level, 'years_experience', us.years_experience, 'verified', us.verified) ORDER BY s.name)
               FROM user_skills us JOIN skills s ON s.id = us.skill_id WHERE us.user_id = up.user_id), '[]'::jsonb) AS skills
-     FROM user_profiles up WHERE up.user_id = $1`, [userId]
+     FROM user_profiles up
+     LEFT JOIN users u ON u.id = up.user_id
+     WHERE up.user_id = $1`, [userId]
   );
   return result.rows[0] ?? null;
 }

@@ -5,7 +5,7 @@ export function AppShell() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <a className="brand-link" href="/" aria-label="CareerGPS home">
+        <a className="brand-link" href="/" aria-label="NaviGoa home">
           <BrandMark className="brand-logo" />
         </a>
         <span className="phase-badge">Frontend foundation</span>

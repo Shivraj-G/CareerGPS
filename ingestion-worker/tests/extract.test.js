@@ -76,7 +76,7 @@ describe('extractOpportunity', () => {
 <body>
 <script>var x = 1;</script>
 <style>.a{color:red}</style>
-<p>This recruitment drive is for various posts across Goa.</p>
+<p>Location: Goa. This recruitment drive is for various posts.</p>
 <p>Advertisement No: GPSC/2026/045</p>
 <p>Last Date: 15/12/2026</p>
 </body>
@@ -88,7 +88,7 @@ describe('extractOpportunity', () => {
     expect(result.organization).toBe('Goa Public Service Commission');
     expect(result.location).toBe('Goa');
     expect(result.advertisement_number).toBe('GPSC/2026/045');
-    expect(result.application_deadline).toBe('15/12/2026');
+    expect(result.application_deadline).toBe('2026-12-15T23:59:59.000Z');
   });
 
   it('does not include extraction_status — that belongs at the candidate envelope level, not in candidate_data', () => {

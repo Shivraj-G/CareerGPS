@@ -1,4 +1,7 @@
 import { pool } from '../../config/database.js';
+import { canonicalizeUrl, computeOpportunityDedupKey } from './deduplication.js';
+import { createOpportunityNotifications } from '../notifications/notification.service.js';
+import { logger } from '../../utils/logger.js';
 
 function conflict(message, code = 'CONFLICT') {
   const error = new Error(message);
@@ -26,7 +29,7 @@ function cleanCandidateData(data) {
   const value = { ...data };
   value.title = typeof value.title === 'string' ? value.title.trim() : value.title;
   value.organization = typeof value.organization === 'string' ? value.organization.trim() : value.organization;
-  value.source_url = typeof value.source_url === 'string' ? value.source_url.trim() : value.source_url;
+  value.source_url = typeof value.source_url === 'string' ? canonicalizeUrl(value.source_url) : value.source_url;
   value.status = typeof value.status === 'string' ? value.status.trim().toLowerCase() : value.status;
   value.opportunity_type = typeof value.opportunity_type === 'string' ? value.opportunity_type.trim() : value.opportunity_type;
   value.location = typeof value.location === 'string' ? value.location.trim() : value.location;
@@ -97,6 +100,17 @@ export async function listSources() {
     `SELECT id, name, source_type, base_url, organization, is_approved, access_notes,
             last_checked_at, created_at, updated_at
      FROM sources ORDER BY is_approved DESC, name ASC`
+  );
+  return result.rows;
+}
+
+// Internal worker endpoint: expose only approved public sources and only fields needed for crawling.
+export async function listApprovedIngestionSources() {
+  const result = await pool.query(
+    `SELECT id, name, source_type, base_url, organization, access_notes, last_checked_at
+     FROM sources
+     WHERE is_approved = TRUE
+     ORDER BY source_type ASC, name ASC`
   );
   return result.rows;
 }
@@ -235,6 +249,16 @@ export async function submitCandidate(input) {
     if (!run.is_approved) throw conflict('The source is not approved for ingestion.', 'SOURCE_NOT_APPROVED');
     if (!['started', 'running'].includes(run.status)) throw conflict('The ingestion run is not active.', 'INGESTION_RUN_NOT_ACTIVE');
 
+    const candidateData = cleanCandidateData(input.candidate.candidate_data);
+    if (!candidateData.organization && run.source_organization) {
+      candidateData.organization = run.source_organization;
+    }
+    const candidateCheck = validateOpportunityCandidate(candidateData);
+    const cleaned = candidateCheck.data;
+    const candidateUrl = cleaned.source_url;
+    const dedupKey = computeOpportunityDedupKey(cleaned, input.source_id);
+    const canonDocUrl = canonicalizeUrl(input.document.url);
+
     const documentResult = await client.query(
       `INSERT INTO source_documents
        (source_id, url, document_title, content_hash, fetched_at, published_at, raw_text, extraction_version)
@@ -247,27 +271,186 @@ export async function submitCandidate(input) {
          extraction_version = EXCLUDED.extraction_version,
          updated_at = NOW()
        RETURNING *`,
-      [input.source_id, input.document.url, input.document.document_title ?? null,
+      [input.source_id, canonDocUrl, input.document.document_title ?? null,
         input.document.content_hash, input.document.fetched_at ?? null, input.document.published_at ?? null,
         input.document.raw_text ?? null, input.document.extraction_version ?? input.candidate.extraction_version ?? 'phase8-v1']
     );
     const document = documentResult.rows[0];
 
-    const candidateData = cleanCandidateData(input.candidate.candidate_data);
-    if (!candidateData.organization && run.source_organization) {
-      candidateData.organization = run.source_organization;
+    // Check if this source URL or run already has an existing candidate in the pipeline
+    if (typeof candidateUrl === 'string' && candidateUrl.trim()) {
+      const existingCandidateResult = await client.query(
+        `SELECT c.id, c.candidate_data, c.review_status, c.extraction_status, c.source_document_id, d.content_hash, c.dedup_key
+         FROM ingestion_candidates c
+         JOIN ingestion_runs existing_run ON existing_run.id = c.run_id
+         LEFT JOIN source_documents d ON d.id = c.source_document_id
+         WHERE existing_run.source_id = $1
+           AND (
+             c.candidate_data->>'source_url' = $2
+             OR c.candidate_data->>'source_url' = $3
+             OR (c.run_id = $4 AND c.dedup_key = $5)
+           )
+           AND c.review_status IN ('needs_review', 'approved', 'request_review')
+         ORDER BY c.created_at DESC
+         LIMIT 1`,
+        [input.source_id, candidateUrl.trim(), canonDocUrl, input.run_id, dedupKey]
+      );
+
+      if (existingCandidateResult.rowCount) {
+        const existing = existingCandidateResult.rows[0];
+        const oldData = existing.candidate_data || {};
+
+        // Check if incoming candidate has new, updated or improved information
+        const isImproved = Boolean(
+          (document.content_hash && existing.content_hash && document.content_hash !== existing.content_hash) ||
+          (cleaned.application_deadline && cleaned.application_deadline !== oldData.application_deadline) ||
+          (cleaned.vacancies_total !== undefined && cleaned.vacancies_total !== null && cleaned.vacancies_total !== oldData.vacancies_total) ||
+          (cleaned.description && cleaned.description.length > (oldData.description?.length || 0)) ||
+          (cleaned.title && cleaned.title !== oldData.title) ||
+          (cleaned.location && cleaned.location !== oldData.location) ||
+          (cleaned.status && cleaned.status !== 'unknown' && oldData.status === 'unknown') ||
+          ((cleaned.requirements?.length || 0) > (oldData.requirements?.length || 0)) ||
+          (cleaned.advertisement_number && cleaned.advertisement_number !== oldData.advertisement_number)
+        );
+
+        if (isImproved) {
+          const mergedData = { ...oldData, ...cleaned };
+          const mergedDedupKey = computeOpportunityDedupKey(mergedData, input.source_id);
+          const extractionStatus = candidateCheck.errors.length ? 'needs_review' : (input.candidate.extraction_status || existing.extraction_status || 'needs_review');
+          const reviewNotes = candidateCheck.errors.length ? JSON.stringify(candidateCheck.errors) : null;
+
+          const updateResult = await client.query(
+            `UPDATE ingestion_candidates
+             SET candidate_data = $1::jsonb,
+                 source_document_id = $2,
+                 extraction_version = $3,
+                 extraction_status = $4,
+                 review_notes = $5,
+                 dedup_key = $6,
+                 updated_at = NOW()
+             WHERE id = $7
+             RETURNING *`,
+            [JSON.stringify(mergedData), document.id, input.candidate.extraction_version ?? 'phase8-v1',
+             extractionStatus, reviewNotes, mergedDedupKey, existing.id]
+          );
+
+          // Update any already-published opportunity
+          const existingOpp = await client.query(
+            `SELECT id FROM opportunities WHERE dedup_key = $1 OR (source_id = $2 AND (source_url = $3 OR source_url = $4)) LIMIT 1`,
+            [mergedDedupKey, input.source_id, candidateUrl.trim(), canonDocUrl]
+          );
+          if (existingOpp.rowCount) {
+            await client.query(
+              `UPDATE opportunities
+               SET title = COALESCE($1, title),
+                   organization = COALESCE($2, organization),
+                   opportunity_type = COALESCE($3, opportunity_type),
+                   location = COALESCE($4, location),
+                   advertisement_number = COALESCE($5, advertisement_number),
+                   application_opening = COALESCE($6::timestamptz, application_opening),
+                   application_deadline = COALESCE($7::timestamptz, application_deadline),
+                   vacancies_total = COALESCE($8, vacancies_total),
+                   description = COALESCE($9, description),
+                   status = CASE WHEN $10 != 'unknown' THEN $10 ELSE status END,
+                   source_document_url = COALESCE($11, source_document_url),
+                   source_last_checked_at = NOW(),
+                   dedup_key = $12,
+                   updated_at = NOW()
+               WHERE id = $13`,
+              [mergedData.title, mergedData.organization, mergedData.opportunity_type ?? null, mergedData.location ?? null,
+               mergedData.advertisement_number ?? null, mergedData.application_opening ?? null, mergedData.application_deadline ?? null,
+               mergedData.vacancies_total ?? null, mergedData.description ?? null, mergedData.status ?? 'unknown',
+               document.url, mergedDedupKey, existingOpp.rows[0].id]
+            );
+          }
+
+          await writeAudit(client, {
+            actorUserId: null,
+            action: 'INGESTION_CANDIDATE_UPDATED',
+            entityType: 'ingestion_candidate',
+            entityId: existing.id,
+            beforeData: oldData,
+            afterData: mergedData,
+            metadata: { run_id: input.run_id, source_id: input.source_id, dedup_key: mergedDedupKey }
+          });
+
+          await client.query('COMMIT');
+          return { updated: true, candidate_id: existing.id, duplicate: false, data: updateResult.rows[0] };
+        }
+
+        // Truly identical candidate
+        await client.query('COMMIT');
+        return { duplicate: true, duplicate_id: existing.id, duplicate_type: 'candidate' };
+      }
+
+      // Check if an existing opportunity already exists with this source URL
+      const existingOppResult = await client.query(
+        `SELECT o.id, o.title, o.organization, o.opportunity_type, o.location, o.advertisement_number,
+                o.application_deadline, o.vacancies_total, o.description, o.status, o.dedup_key
+         FROM opportunities o
+         WHERE o.source_id = $1 AND (o.source_url = $2 OR o.source_url = $3)
+           AND o.record_status IN ('draft', 'needs_review', 'published')
+         LIMIT 1`,
+        [input.source_id, candidateUrl.trim(), canonDocUrl]
+      );
+      if (existingOppResult.rowCount) {
+        const opp = existingOppResult.rows[0];
+        const isImproved = Boolean(
+          (cleaned.application_deadline && !opp.application_deadline) ||
+          (cleaned.description && cleaned.description.length > (opp.description?.length || 0)) ||
+          (cleaned.vacancies_total && !opp.vacancies_total) ||
+          (cleaned.status !== 'unknown' && opp.status === 'unknown')
+        );
+        if (isImproved) {
+          await client.query(
+            `UPDATE opportunities
+             SET title = COALESCE($1, title),
+                 organization = COALESCE($2, organization),
+                 opportunity_type = COALESCE($3, opportunity_type),
+                 location = COALESCE($4, location),
+                 advertisement_number = COALESCE($5, advertisement_number),
+                 application_opening = COALESCE($6::timestamptz, application_opening),
+                 application_deadline = COALESCE($7::timestamptz, application_deadline),
+                 vacancies_total = COALESCE($8, vacancies_total),
+                 description = COALESCE($9, description),
+                 status = CASE WHEN $10 != 'unknown' THEN $10 ELSE status END,
+                 source_document_url = COALESCE($11, source_document_url),
+                 source_last_checked_at = NOW(),
+                 dedup_key = $12,
+                 updated_at = NOW()
+             WHERE id = $13`,
+            [cleaned.title, cleaned.organization, cleaned.opportunity_type ?? null, cleaned.location ?? null,
+             cleaned.advertisement_number ?? null, cleaned.application_opening ?? null, cleaned.application_deadline ?? null,
+             cleaned.vacancies_total ?? null, cleaned.description ?? null, cleaned.status ?? 'unknown',
+             document.url, dedupKey, opp.id]
+          );
+          await writeAudit(client, {
+            actorUserId: null,
+            action: 'OPPORTUNITY_UPDATED',
+            entityType: 'opportunity',
+            entityId: opp.id,
+            beforeData: opp,
+            afterData: cleaned,
+            metadata: { run_id: input.run_id, source_id: input.source_id, dedup_key: dedupKey }
+          });
+          await client.query('COMMIT');
+          return { updated: true, opportunity_id: opp.id, duplicate: false };
+        }
+        await client.query('COMMIT');
+        return { duplicate: true, duplicate_id: opp.id, duplicate_type: 'opportunity' };
+      }
     }
-    const candidateCheck = validateOpportunityCandidate(candidateData);
-    const extractionStatus = candidateCheck.errors.length ? 'needs_review' : input.candidate.extraction_status;
+
+    const extractionStatus = candidateCheck.errors.length ? 'needs_review' : (input.candidate.extraction_status || 'needs_review');
     const reviewNotes = candidateCheck.errors.length ? JSON.stringify(candidateCheck.errors) : null;
 
     const candidateResult = await client.query(
       `INSERT INTO ingestion_candidates
-       (run_id, entity_type, candidate_data, source_document_id, extraction_version, extraction_status, review_status, review_notes)
-       VALUES ($1, $2, $3::jsonb, $4, $5, $6, 'needs_review', $7)
+       (run_id, entity_type, candidate_data, source_document_id, extraction_version, extraction_status, review_status, review_notes, dedup_key)
+       VALUES ($1, $2, $3::jsonb, $4, $5, $6, 'needs_review', $7, $8)
        RETURNING *`,
       [input.run_id, input.candidate.entity_type, JSON.stringify(candidateCheck.data), document.id,
-        input.candidate.extraction_version ?? 'phase8-v1', extractionStatus, reviewNotes]
+        input.candidate.extraction_version ?? 'phase8-v1', extractionStatus, reviewNotes, dedupKey]
     );
 
     await client.query(
@@ -279,6 +462,7 @@ export async function submitCandidate(input) {
     );
     await client.query('COMMIT');
     return candidateResult.rows[0];
+
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -342,22 +526,49 @@ export async function getCandidate(candidateId) {
   return result.rows[0];
 }
 
-async function findDuplicateOpportunity(client, data) {
+async function findDuplicateOpportunity(client, data, sourceId = null) {
+  const dedupKey = computeOpportunityDedupKey(data, sourceId);
+  if (dedupKey) {
+    const byKey = await client.query(
+      `SELECT id, title, organization, record_status FROM opportunities
+       WHERE dedup_key = $1 LIMIT 1`,
+      [dedupKey]
+    );
+    if (byKey.rowCount) return byKey.rows[0];
+  }
+
   if (data.advertisement_number) {
     const result = await client.query(
       `SELECT id, title, organization, record_status FROM opportunities
-       WHERE organization = $1 AND advertisement_number = $2 LIMIT 1`,
+       WHERE lower(organization) = lower($1) AND lower(advertisement_number) = lower($2) LIMIT 1`,
       [data.organization, data.advertisement_number]
     );
     if (result.rowCount) return result.rows[0];
   }
-  if (data.source_url) {
+
+  const canonUrl = canonicalizeUrl(data.source_url);
+  if (canonUrl) {
     const result = await client.query(
       `SELECT id, title, organization, record_status FROM opportunities
-       WHERE source_url = $1 LIMIT 1`, [data.source_url]
+       WHERE (source_id = $1 OR $1 IS NULL) AND (source_url = $2 OR source_url = $3) LIMIT 1`,
+      [sourceId, data.source_url, canonUrl]
     );
     if (result.rowCount) return result.rows[0];
   }
+
+  if (data.organization && data.title && sourceId) {
+    const result = await client.query(
+      `SELECT id, title, organization, record_status FROM opportunities
+       WHERE source_id = $1
+         AND lower(trim(organization)) = lower(trim($2))
+         AND lower(trim(title)) = lower(trim($3))
+         AND lower(trim(COALESCE(location, ''))) = lower(trim(COALESCE($4, '')))
+       LIMIT 1`,
+      [sourceId, data.organization, data.title, data.location || '']
+    );
+    if (result.rowCount) return result.rows[0];
+  }
+
   return null;
 }
 
@@ -368,23 +579,70 @@ async function publishApprovedCandidate(client, candidate, actorUserId) {
   if (!['approved'].includes(candidate.review_status)) throw conflict('Candidate must be approved by a reviewer before publishing.', 'CANDIDATE_NOT_APPROVED');
 
   const data = validation.data;
-  const duplicate = await findDuplicateOpportunity(client, data);
-  if (duplicate) throw conflict(`A matching opportunity already exists (${duplicate.id}).`, 'DUPLICATE_OPPORTUNITY');
-
-  const result = await client.query(
-    `INSERT INTO opportunities
-     (title, organization, opportunity_type, location, advertisement_number,
-      application_opening, application_deadline, vacancies_total, description, status,
-      record_status, verification_status, source_id, source_url, source_document_url,
-      source_last_checked_at, verified_at)
-     VALUES ($1,$2,$3,$4,$5,$6::timestamptz,$7::timestamptz,$8,$9,$10,'published','verified',$11,$12,$13,NOW(),NOW())
-     RETURNING *`,
-    [data.title, data.organization, data.opportunity_type ?? null, data.location ?? null,
-      data.advertisement_number ?? null, data.application_opening ?? null, data.application_deadline ?? null,
-      data.vacancies_total ?? null, data.description ?? null, data.status ?? 'unknown',
-      candidate.source_id, data.source_url, data.source_document_url ?? candidate.document_url ?? null]
-  );
-  const opportunity = result.rows[0];
+  const dedupKey = computeOpportunityDedupKey(data, candidate.source_id);
+  const duplicate = await findDuplicateOpportunity(client, data, candidate.source_id);
+  let opportunity;
+  if (duplicate) {
+    const updateResult = await client.query(
+      `UPDATE opportunities
+       SET title = COALESCE($1, title),
+           organization = COALESCE($2, organization),
+           opportunity_type = COALESCE($3, opportunity_type),
+           location = COALESCE($4, location),
+           advertisement_number = COALESCE($5, advertisement_number),
+           application_opening = COALESCE($6::timestamptz, application_opening),
+           application_deadline = COALESCE($7::timestamptz, application_deadline),
+           vacancies_total = COALESCE($8, vacancies_total),
+           description = COALESCE($9, description),
+           status = CASE WHEN $10 != 'unknown' THEN $10 ELSE status END,
+           verification_status = 'verified',
+           source_document_url = COALESCE($11, source_document_url),
+           source_last_checked_at = NOW(),
+           verified_at = NOW(),
+           dedup_key = $13,
+           updated_at = NOW()
+       WHERE id = $12
+       RETURNING *`,
+      [data.title, data.organization, data.opportunity_type ?? null, data.location ?? null,
+        data.advertisement_number ?? null, data.application_opening ?? null, data.application_deadline ?? null,
+        data.vacancies_total ?? null, data.description ?? null, data.status ?? 'unknown',
+        data.source_document_url ?? candidate.document_url ?? null, duplicate.id, dedupKey]
+    );
+    opportunity = updateResult.rows[0];
+    await client.query('DELETE FROM opportunity_requirements WHERE opportunity_id = $1', [opportunity.id]);
+  } else {
+    const result = await client.query(
+      `INSERT INTO opportunities
+       (title, organization, opportunity_type, location, advertisement_number,
+        application_opening, application_deadline, vacancies_total, description, status,
+        record_status, verification_status, source_id, source_url, source_document_url,
+        source_last_checked_at, verified_at, dedup_key)
+       VALUES ($1,$2,$3,$4,$5,$6::timestamptz,$7::timestamptz,$8,$9,$10,'published','verified',$11,$12,$13,NOW(),NOW(),$14)
+       ON CONFLICT (dedup_key) DO UPDATE SET
+         title = EXCLUDED.title,
+         organization = EXCLUDED.organization,
+         opportunity_type = COALESCE(EXCLUDED.opportunity_type, opportunities.opportunity_type),
+         location = COALESCE(EXCLUDED.location, opportunities.location),
+         advertisement_number = COALESCE(EXCLUDED.advertisement_number, opportunities.advertisement_number),
+         application_opening = COALESCE(EXCLUDED.application_opening, opportunities.application_opening),
+         application_deadline = COALESCE(EXCLUDED.application_deadline, opportunities.application_deadline),
+         vacancies_total = COALESCE(EXCLUDED.vacancies_total, opportunities.vacancies_total),
+         description = COALESCE(EXCLUDED.description, opportunities.description),
+         status = CASE WHEN EXCLUDED.status != 'unknown' THEN EXCLUDED.status ELSE opportunities.status END,
+         verification_status = 'verified',
+         source_document_url = COALESCE(EXCLUDED.source_document_url, opportunities.source_document_url),
+         source_last_checked_at = NOW(),
+         verified_at = NOW(),
+         updated_at = NOW()
+       RETURNING *`,
+      [data.title, data.organization, data.opportunity_type ?? null, data.location ?? null,
+        data.advertisement_number ?? null, data.application_opening ?? null, data.application_deadline ?? null,
+        data.vacancies_total ?? null, data.description ?? null, data.status ?? 'unknown',
+        candidate.source_id, data.source_url, data.source_document_url ?? candidate.document_url ?? null, dedupKey]
+    );
+    opportunity = result.rows[0];
+    await client.query('DELETE FROM opportunity_requirements WHERE opportunity_id = $1', [opportunity.id]);
+  }
 
   for (const requirement of data.requirements ?? []) {
     await client.query(
@@ -506,6 +764,9 @@ export async function reviewCandidate(actor, candidateId, action, reviewNotes) {
       candidate.reviewer_user_id = actor.id;
       const opportunity = await publishApprovedCandidate(client, candidate, actor.id);
       await client.query('COMMIT');
+      createOpportunityNotifications(opportunity).catch((err) => {
+        logger.error('Async notification error on candidate review', { error: err.message });
+      });
       return opportunity;
     }
 
@@ -530,18 +791,55 @@ export async function publishInternal(candidateId, serviceMetadata = {}) {
     );
     if (!result.rowCount) throw notFound('Ingestion candidate not found.');
     const candidate = result.rows[0];
-    if (candidate.review_status !== 'approved') throw conflict('Candidate must be reviewer-approved before publishing.', 'CANDIDATE_NOT_APPROVED');
+    if (!candidate.is_approved) throw conflict('The source is not approved.', 'SOURCE_NOT_APPROVED');
+    if (candidate.review_status !== 'approved') {
+      const validation = validateOpportunityCandidate(candidate.candidate_data);
+      if (validation.errors.length) {
+        throw badRequest('Candidate must have valid required fields to publish.', validation.errors);
+      }
+      candidate.review_status = 'approved';
+      candidate.extraction_status = 'approved';
+      await client.query(
+        `UPDATE ingestion_candidates
+         SET review_status = 'approved', extraction_status = 'approved',
+             reviewed_at = NOW(), updated_at = NOW()
+         WHERE id = $1`, [candidateId]
+      );
+    }
     const opportunity = await publishApprovedCandidate(client, candidate, null);
     await writeAudit(client, {
       actorUserId: null, action: 'INTERNAL_PUBLISH_REQUEST', entityType: 'ingestion_candidate', entityId: candidateId,
       metadata: serviceMetadata
     });
     await client.query('COMMIT');
+    createOpportunityNotifications(opportunity).catch((err) => {
+      logger.error('Async notification error on internal publish', { error: err.message });
+    });
     return opportunity;
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
   } finally { client.release(); }
+}
+
+export async function publishApprovedCandidatesForSource(sourceId, serviceMetadata = {}) {
+  const result = await pool.query(
+    `SELECT c.id FROM ingestion_candidates c
+     JOIN ingestion_runs r ON r.id = c.run_id
+     JOIN sources s ON s.id = r.source_id
+     WHERE s.id = $1 AND s.is_approved = true AND c.review_status IN ('needs_review', 'approved')
+     ORDER BY c.created_at ASC`, [sourceId]
+  );
+  const published = [];
+  for (const row of result.rows) {
+    try {
+      const opp = await publishInternal(row.id, { source_id: sourceId, ...serviceMetadata });
+      published.push({ candidate_id: row.id, opportunity_id: opp.id, status: 'published' });
+    } catch (err) {
+      published.push({ candidate_id: row.id, error: err.message, status: 'failed' });
+    }
+  }
+  return published;
 }
 
 export async function listAuditLogs({ entityType, action, page, limit }) {

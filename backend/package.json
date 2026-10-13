@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node scripts/migrate.js && node src/server.js",
-    "test": "vitest run",
+    "test": "vitest run --no-file-parallelism",
     "test:watch": "vitest",
     "migrate": "node scripts/migrate.js",
     "seed": "node scripts/seed.js",

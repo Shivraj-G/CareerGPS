@@ -1,0 +1,2445 @@
+{
+  "exportedAt": "2026-10-13T11:07:02.800Z",
+  "duplicateGroup": "Sprinto - Software Test Engineer (Bengaluru)",
+  "canonicalRecord": {
+    "id": "c3167a2a-7b42-48ee-bd66-014f184f43cf",
+    "title": "Software Test Engineer",
+    "organization": "Sprinto",
+    "location": "Bengaluru",
+    "advertisement_number": null,
+    "source_id": "f8162916-a111-47b9-a921-46034393009f",
+    "source_url": "https://jobs.lever.co/Sprinto/test-job-1791714967518",
+    "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791714967518",
+    "application_opening": null,
+    "application_deadline": "2026-10-25T10:36:07.594Z",
+    "vacancies_total": 3,
+    "description": "Comprehensive updated description with required skills and criteria",
+    "status": "open",
+    "record_status": "published",
+    "verification_status": "verified",
+    "created_at": "2026-10-11T10:36:07.604Z",
+    "updated_at": "2026-10-11T10:36:07.639Z"
+  },
+  "duplicatesToRemove": [
+    {
+      "id": "654a64d6-4f93-46d8-9d81-db37c04434f9",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791715058869",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791715058869",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T10:37:38.907Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T10:37:38.921Z",
+      "updated_at": "2026-10-11T10:37:38.945Z"
+    },
+    {
+      "id": "6cb9f52f-a2c3-4802-99a7-040d8a7b5ab1",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791717011900",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791717011900",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T11:10:11.995Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T11:10:12.008Z",
+      "updated_at": "2026-10-11T11:10:12.047Z"
+    },
+    {
+      "id": "9b254497-496a-4e89-9d95-2497d4b8f1ef",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791717097595",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791717097595",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T11:11:37.643Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T11:11:37.652Z",
+      "updated_at": "2026-10-11T11:11:37.672Z"
+    },
+    {
+      "id": "2c8221f9-0f08-4607-b3c3-441643e5e642",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791718633166",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791718633166",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T11:37:13.215Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T11:37:13.226Z",
+      "updated_at": "2026-10-11T11:37:13.254Z"
+    },
+    {
+      "id": "29592e11-248f-4c4f-9f32-1834169317d3",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791718649314",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791718649314",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T11:37:29.364Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T11:37:29.384Z",
+      "updated_at": "2026-10-11T11:37:29.419Z"
+    },
+    {
+      "id": "f089c422-4507-47b3-b565-6a359c269463",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791719947076",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791719947076",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T11:59:07.145Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T11:59:07.160Z",
+      "updated_at": "2026-10-11T11:59:07.186Z"
+    },
+    {
+      "id": "d293fec6-dc43-4835-b865-9236a69bf0c2",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791720339008",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791720339008",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T12:05:39.069Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T12:05:39.083Z",
+      "updated_at": "2026-10-11T12:05:39.111Z"
+    },
+    {
+      "id": "714291b0-5f71-4852-a06b-cc4a257f39d1",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791720406618",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791720406618",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T12:06:46.648Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T12:06:46.657Z",
+      "updated_at": "2026-10-11T12:06:46.675Z"
+    },
+    {
+      "id": "9e6e96a7-e515-4636-a115-174f6c6bd85d",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791722346539",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791722346539",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T12:39:06.639Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T12:39:06.652Z",
+      "updated_at": "2026-10-11T12:39:06.678Z"
+    },
+    {
+      "id": "22f921b6-e547-4ee5-ae6a-cb05ecd8e942",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791723342213",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791723342213",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T12:55:42.260Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T12:55:42.280Z",
+      "updated_at": "2026-10-11T12:55:42.308Z"
+    },
+    {
+      "id": "ddccf80e-4a1d-4a2a-a8e4-1b78f5257154",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791724451794",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791724451794",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T13:14:11.839Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T13:14:11.858Z",
+      "updated_at": "2026-10-11T13:14:11.903Z"
+    },
+    {
+      "id": "cef2eeb4-7e9d-420e-8187-08b490262bf5",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791730931602",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791730931602",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T15:02:11.642Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T15:02:11.659Z",
+      "updated_at": "2026-10-11T15:02:11.680Z"
+    },
+    {
+      "id": "90fee73d-8dd7-41f0-ac98-9d4dfe013316",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791731029348",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791731029348",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T15:03:49.410Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T15:03:49.425Z",
+      "updated_at": "2026-10-11T15:03:49.450Z"
+    },
+    {
+      "id": "0bee8251-c9d0-46b4-97fc-ffd0c083ab0e",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791731196949",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791731196949",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T15:06:36.996Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T15:06:37.014Z",
+      "updated_at": "2026-10-11T15:06:37.054Z"
+    },
+    {
+      "id": "258b1bc5-0ef8-486b-b228-0db9a52b345a",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791732314345",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791732314345",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T15:25:14.389Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T15:25:14.403Z",
+      "updated_at": "2026-10-11T15:25:14.434Z"
+    },
+    {
+      "id": "df7525bd-0fe7-4769-a157-493f97112bba",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791732578237",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791732578237",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T15:29:38.281Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T15:29:38.294Z",
+      "updated_at": "2026-10-11T15:29:38.334Z"
+    },
+    {
+      "id": "6300050e-7220-49aa-81f0-0183e06ff9c7",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791734401344",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791734401344",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T16:00:01.402Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T16:00:01.451Z",
+      "updated_at": "2026-10-11T16:00:01.505Z"
+    },
+    {
+      "id": "25fdc1fb-df25-42aa-afbe-deac63c56e02",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791736698460",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791736698460",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T16:38:18.565Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T16:38:18.580Z",
+      "updated_at": "2026-10-11T16:38:18.627Z"
+    },
+    {
+      "id": "a4395121-72ce-4038-8f47-49e5d968ee0b",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791739026792",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791739026792",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T17:17:06.892Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T17:17:06.912Z",
+      "updated_at": "2026-10-11T17:17:06.950Z"
+    },
+    {
+      "id": "00625d55-4b6e-476d-b879-6e154a613d1d",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791739145017",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791739145017",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T17:19:05.119Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T17:19:05.136Z",
+      "updated_at": "2026-10-11T17:19:05.181Z"
+    },
+    {
+      "id": "c98aab21-bab2-4ebd-880e-7321d81625a0",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791740947738",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791740947738",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T17:49:07.783Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T17:49:07.802Z",
+      "updated_at": "2026-10-11T17:49:07.864Z"
+    },
+    {
+      "id": "c68f41bc-946b-4647-b442-e3e803d1b5ad",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791743752028",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791743752028",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T18:35:52.111Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T18:35:52.158Z",
+      "updated_at": "2026-10-11T18:35:52.202Z"
+    },
+    {
+      "id": "5c770df4-de71-4d79-be79-713454677329",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791747893254",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791747893254",
+      "application_opening": null,
+      "application_deadline": "2026-10-25T19:44:53.366Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-11T19:44:53.398Z",
+      "updated_at": "2026-10-11T19:44:53.428Z"
+    },
+    {
+      "id": "8388b354-82e8-42a5-ad15-4fcb975b28de",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791803716725",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791803716725",
+      "application_opening": null,
+      "application_deadline": "2026-10-26T11:15:16.898Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-12T11:15:16.920Z",
+      "updated_at": "2026-10-12T11:15:16.998Z"
+    },
+    {
+      "id": "ca1a5a3c-629e-45d4-aefe-4d5c19ceb6d8",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791805456319",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791805456319",
+      "application_opening": null,
+      "application_deadline": "2026-10-26T11:44:16.374Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-12T11:44:16.392Z",
+      "updated_at": "2026-10-12T11:44:16.495Z"
+    },
+    {
+      "id": "fd2d35da-368c-4b28-bf70-330a6dcba661",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791805721141",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791805721141",
+      "application_opening": null,
+      "application_deadline": "2026-10-26T11:48:41.211Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-12T11:48:41.233Z",
+      "updated_at": "2026-10-12T11:48:41.268Z"
+    },
+    {
+      "id": "1513d707-9f0e-4d8e-bf7c-bb707dafaa3f",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791805746763",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791805746763",
+      "application_opening": null,
+      "application_deadline": "2026-10-26T11:49:06.789Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-12T11:49:06.798Z",
+      "updated_at": "2026-10-12T11:49:06.814Z"
+    },
+    {
+      "id": "600d60cb-2e92-4597-8cd2-b6b6555fbef5",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791806560838",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791806560838",
+      "application_opening": null,
+      "application_deadline": "2026-10-26T12:02:40.895Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-12T12:02:40.918Z",
+      "updated_at": "2026-10-12T12:02:40.962Z"
+    },
+    {
+      "id": "bf2d08eb-2cd8-4884-b823-76027abacb8b",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791809590135",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791809590135",
+      "application_opening": null,
+      "application_deadline": "2026-10-26T12:53:10.216Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-12T12:53:10.236Z",
+      "updated_at": "2026-10-12T12:53:10.268Z"
+    },
+    {
+      "id": "97e9e13a-ce0f-42b6-a30e-975d9789f4d2",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791809951334",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791809951334",
+      "application_opening": null,
+      "application_deadline": "2026-10-26T12:59:11.387Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-12T12:59:11.404Z",
+      "updated_at": "2026-10-12T12:59:11.454Z"
+    },
+    {
+      "id": "eb96de4f-ef6e-4709-a11f-304114535eac",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791813440955",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791813440955",
+      "application_opening": null,
+      "application_deadline": "2026-10-26T13:57:21.009Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-12T13:57:21.028Z",
+      "updated_at": "2026-10-12T13:57:21.061Z"
+    },
+    {
+      "id": "32bc9e56-fcb3-4548-b54a-fa8072870224",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791816087699",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791816087699",
+      "application_opening": null,
+      "application_deadline": "2026-10-26T14:41:27.755Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-12T14:41:27.775Z",
+      "updated_at": "2026-10-12T14:41:27.804Z"
+    },
+    {
+      "id": "32edff73-e3b8-4f9d-be8e-d9327d5b82f4",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791819779995",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791819779995",
+      "application_opening": null,
+      "application_deadline": "2026-10-26T15:43:00.048Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-12T15:43:00.068Z",
+      "updated_at": "2026-10-12T15:43:00.101Z"
+    },
+    {
+      "id": "2281d1a3-68f1-43a4-bcc3-078508dcabbe",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791827695991",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791827695991",
+      "application_opening": null,
+      "application_deadline": "2026-10-26T17:54:56.062Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-12T17:54:56.083Z",
+      "updated_at": "2026-10-12T17:54:56.145Z"
+    },
+    {
+      "id": "8a8f059c-3083-42e2-adef-779a74411e09",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791830222121",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791830222121",
+      "application_opening": null,
+      "application_deadline": "2026-10-26T18:37:02.174Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-12T18:37:02.201Z",
+      "updated_at": "2026-10-12T18:37:02.278Z"
+    },
+    {
+      "id": "5bd735c3-de2a-419d-9560-81306b6c51b8",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791830341267",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791830341267",
+      "application_opening": null,
+      "application_deadline": "2026-10-26T18:39:01.318Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-12T18:39:01.337Z",
+      "updated_at": "2026-10-12T18:39:01.378Z"
+    },
+    {
+      "id": "aa137888-67b5-4ec8-8c48-524181d26395",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791884470156",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791884470156",
+      "application_opening": null,
+      "application_deadline": "2026-10-27T09:41:10.304Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-13T09:41:10.324Z",
+      "updated_at": "2026-10-13T09:41:10.393Z"
+    },
+    {
+      "id": "061e56b7-8c5e-425f-a483-ba292017bb12",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791884626614",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791884626614",
+      "application_opening": null,
+      "application_deadline": "2026-10-27T09:43:46.672Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-13T09:43:46.694Z",
+      "updated_at": "2026-10-13T09:43:46.734Z"
+    },
+    {
+      "id": "fdfac1e1-a45d-49a9-bacc-443a08a234d3",
+      "title": "Software Test Engineer",
+      "organization": "Sprinto",
+      "location": "Bengaluru",
+      "advertisement_number": null,
+      "source_id": "f8162916-a111-47b9-a921-46034393009f",
+      "source_url": "https://jobs.lever.co/Sprinto/test-job-1791887868367",
+      "source_document_url": "https://jobs.lever.co/Sprinto/test-job-1791887868367",
+      "application_opening": null,
+      "application_deadline": "2026-10-27T10:37:48.461Z",
+      "vacancies_total": 3,
+      "description": "Comprehensive updated description with required skills and criteria",
+      "status": "open",
+      "record_status": "published",
+      "verification_status": "verified",
+      "created_at": "2026-10-13T10:37:48.486Z",
+      "updated_at": "2026-10-13T10:37:48.525Z"
+    }
+  ],
+  "relatedRequirements": [
+    {
+      "id": "ed475c16-8702-4a36-96e7-d4fabecaa2e5",
+      "opportunity_id": "c3167a2a-7b42-48ee-bd66-014f184f43cf",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "71d13538-ba83-4dd3-be46-0a55337abaeb",
+      "opportunity_id": "c3167a2a-7b42-48ee-bd66-014f184f43cf",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "76721981-bc8b-4b18-a797-1349212e5651",
+      "opportunity_id": "c3167a2a-7b42-48ee-bd66-014f184f43cf",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "9929c02c-40ea-4f5d-90a6-ffc4a967a00a",
+      "opportunity_id": "654a64d6-4f93-46d8-9d81-db37c04434f9",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "e5f8e814-d733-4bd5-8f73-5859b96bb2d1",
+      "opportunity_id": "654a64d6-4f93-46d8-9d81-db37c04434f9",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "0ede904d-1054-46a8-9ae6-c05eb40e3c06",
+      "opportunity_id": "654a64d6-4f93-46d8-9d81-db37c04434f9",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "8ddefd1d-9f55-44a1-8fcd-069587b4fd3e",
+      "opportunity_id": "6cb9f52f-a2c3-4802-99a7-040d8a7b5ab1",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "28cf5a88-59c3-47b9-917b-ae4515dd0590",
+      "opportunity_id": "6cb9f52f-a2c3-4802-99a7-040d8a7b5ab1",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "a6adb351-b48c-499f-85cd-337821d125ac",
+      "opportunity_id": "6cb9f52f-a2c3-4802-99a7-040d8a7b5ab1",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "e3d00ae7-a38c-46e9-9252-a07224a8ac85",
+      "opportunity_id": "9b254497-496a-4e89-9d95-2497d4b8f1ef",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "7f04623e-cc72-4037-8022-9a136d19c966",
+      "opportunity_id": "9b254497-496a-4e89-9d95-2497d4b8f1ef",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "db977bf8-7441-4f7a-9622-dd2317ed4332",
+      "opportunity_id": "9b254497-496a-4e89-9d95-2497d4b8f1ef",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "b5632b6a-441e-432c-81f9-e6181b33fe84",
+      "opportunity_id": "2c8221f9-0f08-4607-b3c3-441643e5e642",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "0ef09662-4b56-4e9f-aed0-116fc28c683b",
+      "opportunity_id": "2c8221f9-0f08-4607-b3c3-441643e5e642",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "82b8cc1a-0a4e-46c3-983c-f62fbc32138b",
+      "opportunity_id": "2c8221f9-0f08-4607-b3c3-441643e5e642",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "71f3c1ef-429e-4669-9d30-a0d5ed853e03",
+      "opportunity_id": "29592e11-248f-4c4f-9f32-1834169317d3",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "dcac7ac1-72c0-4ac9-8aa4-be8f7b01535a",
+      "opportunity_id": "29592e11-248f-4c4f-9f32-1834169317d3",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "8f5ca20f-5969-44a7-897c-47020c3f1884",
+      "opportunity_id": "29592e11-248f-4c4f-9f32-1834169317d3",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "e5036f14-5db8-46e4-afa6-3e570f8ec019",
+      "opportunity_id": "f089c422-4507-47b3-b565-6a359c269463",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "11626e73-4603-4843-a80b-7deefffed871",
+      "opportunity_id": "f089c422-4507-47b3-b565-6a359c269463",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "279b7e1c-e0c4-4b55-be2f-8f000d1fcae9",
+      "opportunity_id": "f089c422-4507-47b3-b565-6a359c269463",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "cc584f13-fe0a-4703-9949-f5efba299d78",
+      "opportunity_id": "d293fec6-dc43-4835-b865-9236a69bf0c2",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "bcd0d82a-607d-444d-8ad2-2f49e7d619cd",
+      "opportunity_id": "d293fec6-dc43-4835-b865-9236a69bf0c2",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "4e94e877-e7b2-4e0e-95b0-da21930bf677",
+      "opportunity_id": "d293fec6-dc43-4835-b865-9236a69bf0c2",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "c9714ada-3d29-4f93-9ab4-9214a73f44c7",
+      "opportunity_id": "714291b0-5f71-4852-a06b-cc4a257f39d1",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "d3532282-300f-427f-b141-2c5e6dfd5973",
+      "opportunity_id": "714291b0-5f71-4852-a06b-cc4a257f39d1",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "4c3084a4-e503-4ea9-8ad3-d7033fbca8aa",
+      "opportunity_id": "714291b0-5f71-4852-a06b-cc4a257f39d1",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "20ae9fc7-3022-4577-a788-4b69f62f93c2",
+      "opportunity_id": "9e6e96a7-e515-4636-a115-174f6c6bd85d",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "4c0a53f2-0e1f-4764-ae0b-dbb8988c8375",
+      "opportunity_id": "9e6e96a7-e515-4636-a115-174f6c6bd85d",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "11b4ecd0-95b2-4f3e-b610-7a801085afc4",
+      "opportunity_id": "9e6e96a7-e515-4636-a115-174f6c6bd85d",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "0f06b979-e10a-486f-bda2-db5629ee68d7",
+      "opportunity_id": "22f921b6-e547-4ee5-ae6a-cb05ecd8e942",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "a72651bd-d405-4134-a9e6-8c289bfef1f3",
+      "opportunity_id": "22f921b6-e547-4ee5-ae6a-cb05ecd8e942",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "dbf922b8-165f-4d38-88f2-9cbe0b7713e9",
+      "opportunity_id": "22f921b6-e547-4ee5-ae6a-cb05ecd8e942",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "17e92d58-fc2d-43a4-8d50-d99c28e70e2d",
+      "opportunity_id": "ddccf80e-4a1d-4a2a-a8e4-1b78f5257154",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "63a907ce-bd25-4212-8363-6da6ecd3d6d9",
+      "opportunity_id": "ddccf80e-4a1d-4a2a-a8e4-1b78f5257154",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "5d8694db-2439-4354-8618-bfa1d0880d73",
+      "opportunity_id": "ddccf80e-4a1d-4a2a-a8e4-1b78f5257154",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "bfe158b9-87c2-4336-ae8a-e8625dcb38b7",
+      "opportunity_id": "cef2eeb4-7e9d-420e-8187-08b490262bf5",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "fc81696c-67b2-4aa0-adb6-49e35e264839",
+      "opportunity_id": "cef2eeb4-7e9d-420e-8187-08b490262bf5",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "c3aba71a-8943-4b0d-a823-aa1147aa53e8",
+      "opportunity_id": "cef2eeb4-7e9d-420e-8187-08b490262bf5",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "1d289394-0d6e-4c77-9af0-8ab374afe9c9",
+      "opportunity_id": "90fee73d-8dd7-41f0-ac98-9d4dfe013316",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "53b10f94-9922-4ed5-950b-fb928d69e695",
+      "opportunity_id": "90fee73d-8dd7-41f0-ac98-9d4dfe013316",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "fc3e625e-cb53-406a-8865-2ee609b0b6d5",
+      "opportunity_id": "90fee73d-8dd7-41f0-ac98-9d4dfe013316",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "5158ed67-ccd7-49c6-bb00-9f34d73f12d8",
+      "opportunity_id": "0bee8251-c9d0-46b4-97fc-ffd0c083ab0e",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "68e17dad-4f3f-4c31-a255-b6345b63b68a",
+      "opportunity_id": "0bee8251-c9d0-46b4-97fc-ffd0c083ab0e",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "b99fc07d-3505-44cb-b3f5-be2d792d1beb",
+      "opportunity_id": "0bee8251-c9d0-46b4-97fc-ffd0c083ab0e",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "6463bb58-f5ca-4171-ac1e-381ea6dcc200",
+      "opportunity_id": "258b1bc5-0ef8-486b-b228-0db9a52b345a",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "5505df9e-1c21-4613-bd51-6b5b56a18a63",
+      "opportunity_id": "258b1bc5-0ef8-486b-b228-0db9a52b345a",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "ad01406f-49e3-4c42-b6ec-43cd8c5e1298",
+      "opportunity_id": "258b1bc5-0ef8-486b-b228-0db9a52b345a",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "0151832a-a3f4-41cf-af17-235398fbfae6",
+      "opportunity_id": "df7525bd-0fe7-4769-a157-493f97112bba",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "91cb602f-aee7-4c7a-9e74-82098b26e7f4",
+      "opportunity_id": "df7525bd-0fe7-4769-a157-493f97112bba",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "aac7a2dd-685d-4040-988d-19b3a4f1e964",
+      "opportunity_id": "df7525bd-0fe7-4769-a157-493f97112bba",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "4889ed46-17f0-4ee0-b8a7-007ab5775aa6",
+      "opportunity_id": "6300050e-7220-49aa-81f0-0183e06ff9c7",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "6e7ff54c-5b99-40d9-a90d-d202537ceb18",
+      "opportunity_id": "6300050e-7220-49aa-81f0-0183e06ff9c7",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "f08c4ee9-a3c1-4a4e-8c68-411438a315a0",
+      "opportunity_id": "6300050e-7220-49aa-81f0-0183e06ff9c7",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "998cde07-af93-4883-bb81-064e0f5b76b1",
+      "opportunity_id": "25fdc1fb-df25-42aa-afbe-deac63c56e02",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "6aa531e1-00ad-48b3-8668-14c4360c82c6",
+      "opportunity_id": "25fdc1fb-df25-42aa-afbe-deac63c56e02",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "c46d2644-ee79-4c7f-8ea8-52d1ee94003f",
+      "opportunity_id": "25fdc1fb-df25-42aa-afbe-deac63c56e02",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "e44b77ea-7db3-4b9e-a593-2becdfed7c37",
+      "opportunity_id": "a4395121-72ce-4038-8f47-49e5d968ee0b",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "032034fa-3a2a-41fa-94cc-d4c2b308f06c",
+      "opportunity_id": "a4395121-72ce-4038-8f47-49e5d968ee0b",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "c0570579-1efb-4e4e-b176-fe4ef9d02626",
+      "opportunity_id": "a4395121-72ce-4038-8f47-49e5d968ee0b",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "13a45995-88aa-41e1-8dbc-1b4666bafae4",
+      "opportunity_id": "00625d55-4b6e-476d-b879-6e154a613d1d",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "27bedc58-c804-4953-939b-c62aa98cc496",
+      "opportunity_id": "00625d55-4b6e-476d-b879-6e154a613d1d",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "9f3a5b16-7d5d-481d-8ad1-d86191a49ef2",
+      "opportunity_id": "00625d55-4b6e-476d-b879-6e154a613d1d",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "47ee7032-8065-4203-bdb4-b32e58ef3624",
+      "opportunity_id": "c98aab21-bab2-4ebd-880e-7321d81625a0",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "5bc4f800-36e4-4c3e-b6bb-4d1fadc20eb6",
+      "opportunity_id": "c98aab21-bab2-4ebd-880e-7321d81625a0",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "5819167a-4cd5-413c-92b9-180b0edbc052",
+      "opportunity_id": "c98aab21-bab2-4ebd-880e-7321d81625a0",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "5368fabb-7f90-4495-a9f7-eb73910c7b0b",
+      "opportunity_id": "c68f41bc-946b-4647-b442-e3e803d1b5ad",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "a0f501d5-25f5-45cf-a469-f3b667966f70",
+      "opportunity_id": "c68f41bc-946b-4647-b442-e3e803d1b5ad",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "62e102f6-114f-43f9-9ddd-4dd695b7f032",
+      "opportunity_id": "c68f41bc-946b-4647-b442-e3e803d1b5ad",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "3ad76361-f9c6-4572-bbe2-db5d30ef0ca5",
+      "opportunity_id": "5c770df4-de71-4d79-be79-713454677329",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "9912d098-3a8c-4442-8f9b-652b49f2bf47",
+      "opportunity_id": "5c770df4-de71-4d79-be79-713454677329",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "af927aa2-42ed-4463-af9f-c4158bb75eca",
+      "opportunity_id": "5c770df4-de71-4d79-be79-713454677329",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "59f71641-20f6-4bd9-9d29-22c4ce30f7be",
+      "opportunity_id": "8388b354-82e8-42a5-ad15-4fcb975b28de",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "a3cefa5e-ee25-4fd9-ba85-db1058e2f3a2",
+      "opportunity_id": "8388b354-82e8-42a5-ad15-4fcb975b28de",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "175198ff-069c-4449-a992-3f65ba1ab524",
+      "opportunity_id": "8388b354-82e8-42a5-ad15-4fcb975b28de",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "0729b012-1ea2-4918-8506-c09808059503",
+      "opportunity_id": "ca1a5a3c-629e-45d4-aefe-4d5c19ceb6d8",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "fb5df72b-0136-42e1-9954-5975505e2b02",
+      "opportunity_id": "ca1a5a3c-629e-45d4-aefe-4d5c19ceb6d8",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "e241ce65-f38d-478a-9378-dfd7ca209793",
+      "opportunity_id": "ca1a5a3c-629e-45d4-aefe-4d5c19ceb6d8",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "ffcdce85-a704-4015-8ecf-15ec5eeed4e9",
+      "opportunity_id": "fd2d35da-368c-4b28-bf70-330a6dcba661",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "d1e78d46-8af5-4c30-a508-8e50afe77795",
+      "opportunity_id": "fd2d35da-368c-4b28-bf70-330a6dcba661",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "3eef2fbb-eb80-4610-89d2-0dd3a6cfa232",
+      "opportunity_id": "fd2d35da-368c-4b28-bf70-330a6dcba661",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "c5f7ea69-8d47-4326-a066-f9d88ef637c3",
+      "opportunity_id": "1513d707-9f0e-4d8e-bf7c-bb707dafaa3f",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "9ac1f6e9-15bc-47db-ba5b-8250282e5e77",
+      "opportunity_id": "1513d707-9f0e-4d8e-bf7c-bb707dafaa3f",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "873b2574-6c67-4f4d-a1bb-a1858eec2030",
+      "opportunity_id": "1513d707-9f0e-4d8e-bf7c-bb707dafaa3f",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "52ca862f-dba1-440e-93c9-a6219c91b682",
+      "opportunity_id": "600d60cb-2e92-4597-8cd2-b6b6555fbef5",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "b8fd792f-7e52-4037-9e0c-805c94b7f7e5",
+      "opportunity_id": "600d60cb-2e92-4597-8cd2-b6b6555fbef5",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "cce22941-9bad-481a-ae1d-4cdee069cae2",
+      "opportunity_id": "600d60cb-2e92-4597-8cd2-b6b6555fbef5",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "d1c7d90d-34c3-4c06-9190-427102d1235b",
+      "opportunity_id": "bf2d08eb-2cd8-4884-b823-76027abacb8b",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "505cf488-ddb2-4a07-b2ca-57373cd67313",
+      "opportunity_id": "bf2d08eb-2cd8-4884-b823-76027abacb8b",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "3046b4a8-178e-4218-81a3-996bc3b7df7a",
+      "opportunity_id": "bf2d08eb-2cd8-4884-b823-76027abacb8b",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "54b18b0a-49db-4a73-a7f6-f091cfa04091",
+      "opportunity_id": "97e9e13a-ce0f-42b6-a30e-975d9789f4d2",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "1b17a3f0-5689-4892-8d22-82483204f181",
+      "opportunity_id": "97e9e13a-ce0f-42b6-a30e-975d9789f4d2",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "1e84d81f-72c4-49f7-a704-daec45d67529",
+      "opportunity_id": "97e9e13a-ce0f-42b6-a30e-975d9789f4d2",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "7f1c932c-b325-4b90-9381-25f44393c8b4",
+      "opportunity_id": "eb96de4f-ef6e-4709-a11f-304114535eac",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "9a3f3b9f-940a-4409-9483-cbe0fd1bbd7f",
+      "opportunity_id": "eb96de4f-ef6e-4709-a11f-304114535eac",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "ab3af8a1-4c22-41ac-bea9-851b74ce468a",
+      "opportunity_id": "eb96de4f-ef6e-4709-a11f-304114535eac",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "6b95d01e-3dc8-42b5-8e66-f26e96f56ef7",
+      "opportunity_id": "32bc9e56-fcb3-4548-b54a-fa8072870224",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "2e4e8d1e-4950-4696-9be5-5815e0428ae9",
+      "opportunity_id": "32bc9e56-fcb3-4548-b54a-fa8072870224",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "e47269ed-1c41-4b9f-a2b1-cac502d40b25",
+      "opportunity_id": "32bc9e56-fcb3-4548-b54a-fa8072870224",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "bcbb10af-8b81-494d-96e6-043dfddd20a4",
+      "opportunity_id": "32edff73-e3b8-4f9d-be8e-d9327d5b82f4",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "876c48bf-57b0-492b-b6df-6000bc186d9a",
+      "opportunity_id": "32edff73-e3b8-4f9d-be8e-d9327d5b82f4",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "4f7699d0-0755-4a7c-918b-84c4c1746746",
+      "opportunity_id": "32edff73-e3b8-4f9d-be8e-d9327d5b82f4",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "f90e17c7-4199-41c2-a3b8-0526383ad864",
+      "opportunity_id": "2281d1a3-68f1-43a4-bcc3-078508dcabbe",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "2f53cb2b-7a80-4235-bf28-68680a078aac",
+      "opportunity_id": "2281d1a3-68f1-43a4-bcc3-078508dcabbe",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "307f86a5-9028-444b-9a17-c3d73783093a",
+      "opportunity_id": "2281d1a3-68f1-43a4-bcc3-078508dcabbe",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "87bb25dc-3340-4a60-b30f-f566f662093a",
+      "opportunity_id": "8a8f059c-3083-42e2-adef-779a74411e09",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "e61b73e8-4f9c-47f3-b19b-78f7809e70fc",
+      "opportunity_id": "8a8f059c-3083-42e2-adef-779a74411e09",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "23b3b24d-924c-4ec9-8e29-a3c074d9f53c",
+      "opportunity_id": "8a8f059c-3083-42e2-adef-779a74411e09",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "d77490db-9691-45ec-9f21-0e846d0912e3",
+      "opportunity_id": "5bd735c3-de2a-419d-9560-81306b6c51b8",
+      "requirement_type": "notice",
+      "requirement_text": "Consult the official advertisement for post-specific educational qualification.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "d91ad1ba-89f8-4ec7-9a46-f95fb03b5f6a",
+      "opportunity_id": "5bd735c3-de2a-419d-9560-81306b6c51b8",
+      "requirement_type": "age",
+      "requirement_text": "Consult the official advertisement for age and category conditions.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    },
+    {
+      "id": "282ba022-31a0-4193-8dca-bc5f8bd9eb9e",
+      "opportunity_id": "5bd735c3-de2a-419d-9560-81306b6c51b8",
+      "requirement_type": "documents",
+      "requirement_text": "Consult the official advertisement for application documents.",
+      "rule_data": {
+        "requires_official_notice": true
+      },
+      "verification_status": "needs_review",
+      "source_id": "e9c7a784-1ad1-433c-b95d-76c38e7a8ec8",
+      "source_url": "https://www.goa.gov.in/citizen/recruitment/",
+      "source_document_url": null,
+      "created_at": "2026-10-13T08:58:41.417Z",
+      "updated_at": "2026-10-13T08:58:41.417Z"
+    }
+  ],
+  "relatedCareerOpportunities": [],
+  "relatedEligibilityChecks": [
+    {
+      "id": "a69628b2-0558-4592-b630-22820ce2bbee",
+      "user_id": "55602f28-bdec-46eb-be58-aa7b7b81e295",
+      "opportunity_id": "c3167a2a-7b42-48ee-bd66-014f184f43cf",
+      "outcome": "unable_to_determine",
+      "results": [],
+      "evaluated_at": "2026-10-11T11:40:01.100Z",
+      "created_at": "2026-10-11T11:40:01.100Z"
+    }
+  ]
+}

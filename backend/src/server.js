@@ -2,17 +2,22 @@ import { createApp } from "./app.js";
 import { env } from "./config/env.js";
 import { pool } from "./config/database.js";
 import { logger } from "./utils/logger.js";
+import { startNotificationScheduler, stopNotificationScheduler } from "./modules/notifications/notification.scheduler.js";
 
 const app = createApp();
-const server = app.listen(env.PORT, "0.0.0.0", () => {
+const host = env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1";
+const server = app.listen(env.PORT, host, () => {
   logger.info("Backend server started", {
     port: env.PORT,
     environment: env.NODE_ENV,
   });
+  // Start closing-soon notification scheduler
+  startNotificationScheduler();
 });
 
 async function shutdown(signal) {
   logger.info(`Received ${signal}; shutting down`);
+  stopNotificationScheduler();
   // Force-exit after 10 s so hung DB connections don't block deploys
   const forceExit = setTimeout(() => {
     logger.error("Graceful shutdown timed out — forcing exit");

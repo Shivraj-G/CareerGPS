@@ -8,9 +8,9 @@ import {
   runStatusSchema, candidateReviewSchema, auditQuerySchema, publishSchema
 } from './ingestion.validation.js';
 import {
-  listSources, createSource, updateSource, createRun, listRuns, getRun,
+  listSources, listApprovedIngestionSources, createSource, updateSource, createRun, listRuns, getRun,
   submitCandidate, updateRunStatus, listReviewQueue, getCandidate, reviewCandidate,
-  publishInternal, listAuditLogs
+  publishInternal, publishApprovedCandidatesForSource, listAuditLogs
 } from './ingestion.service.js';
 
 const admin = Router();
@@ -75,6 +75,15 @@ admin.get('/audit-log', async (req, res, next) => {
 
 const internal = Router();
 internal.use(requireInternalService);
+
+// Registry-based ingestion worker endpoints. Only pre-approved source records are exposed.
+internal.get('/sources', async (_req, res, next) => {
+  try { res.json({ data: await listApprovedIngestionSources() }); } catch (e) { next(e); }
+});
+internal.post('/runs', validate(runCreateSchema), async (req, res, next) => {
+  try { res.status(201).json({ data: await createRun({ id: null }, req.body.source_id) }); } catch (e) { next(e); }
+});
+
 internal.post('/candidates', validate(candidateSubmitSchema), async (req, res, next) => {
   try { res.status(201).json({ data: await submitCandidate(req.body) }); } catch (e) { next(e); }
 });
@@ -83,6 +92,9 @@ internal.post('/runs/:runId/status', validate(runStatusSchema), async (req, res,
 });
 internal.post('/publish', validate(publishSchema), async (req, res, next) => {
   try { res.json({ data: await publishInternal(req.body.candidate_id, { service: 'ingestion-worker' }) }); } catch (e) { next(e); }
+});
+internal.post('/sources/:sourceId/publish', async (req, res, next) => {
+  try { res.json({ data: await publishApprovedCandidatesForSource(req.params.sourceId, { service: 'ingestion-worker' }) }); } catch (e) { next(e); }
 });
 
 export { admin as adminIngestionRoutes, internal as internalIngestionRoutes };

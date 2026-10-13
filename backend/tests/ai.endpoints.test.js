@@ -199,7 +199,7 @@ describe('AI Endpoints', () => {
         .send({ query: 'backend' });
 
       expect(res.status).toBe(200);
-      expect(res.body.data).toEqual([]); // Omitted since it's unresolvable
+      expect(res.body.data).toEqual([]); // Non-catalogue skills are dropped
     });
   });
 });

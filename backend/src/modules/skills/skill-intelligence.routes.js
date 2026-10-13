@@ -1,9 +1,11 @@
 import { Router } from 'express';
+import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { authenticate } from '../../middleware/authenticate.js';
 import { pool } from '../../config/database.js';
 import { env } from '../../config/env.js';
 import { getUserSkills, calculateSkillGap, calculateAiSkillGap } from './skill-intelligence.service.js';
+import { classifySkillLevel, buildLearningMetadata, personalizeSkill, normalizeString } from './skill-learning-engine.js';
 
 const router = Router();
 const gapSchema = z.object({ 
@@ -26,10 +28,6 @@ const customSkillSchema = z.object({
   name: z.string().min(1).max(60).transform(v => v.replace(/<[^>]*>?/gm, '').replace(/[\x00-\x1F\x7F]/g, '').trim()),
   level: z.enum(['beginner','intermediate','advanced','expert','unknown']).default('beginner')
 });
-
-function normalizeString(str) {
-  return str.toLowerCase().replace(/[^a-z0-9+#]/g, '');
-}
 
 router.post('/me/custom', authenticate, async (req, res, next) => {
   try {
@@ -180,4 +178,122 @@ router.post('/gap-analysis', authenticate, async (req, res, next) => {
     next(e); 
   }
 });
+
+router.get('/:skillId/detail', async (req, res, next) => {
+  try {
+    const { skillId } = req.params;
+    const { careerId } = req.query;
+
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(skillId);
+    let skillRes;
+    if (isUuid) {
+      skillRes = await pool.query(
+        `SELECT id, name, description, category, learning_level, learning_metadata
+         FROM skills WHERE id = $1`,
+        [skillId]
+      );
+    } else {
+      skillRes = await pool.query(
+        `SELECT id, name, description, category, learning_level, learning_metadata
+         FROM skills WHERE name ILIKE $1 LIMIT 1`,
+        [skillId]
+      );
+    }
+
+    let skill = skillRes.rows[0];
+    if (!skill) {
+      // Allow detail generation for arbitrary skill names (e.g. AI fallback skills)
+      skill = {
+        id: skillId,
+        name: skillId.replace(/^ai-skill-fallback-\d+-?/, '') || 'Skill',
+        description: null,
+        learning_level: 'intermediate',
+        learning_metadata: {}
+      };
+    }
+
+    let careerTitle = 'Professional Role';
+    let importance = 'important';
+
+    if (careerId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(careerId)) {
+      const careerRes = await pool.query(`SELECT title FROM careers WHERE id = $1`, [careerId]);
+      if (careerRes.rows[0]) {
+        careerTitle = careerRes.rows[0].title;
+      } else {
+        const aiCRes = await pool.query(`SELECT title FROM ai_career_profiles WHERE id = $1`, [careerId]);
+        if (aiCRes.rows[0]) careerTitle = aiCRes.rows[0].title;
+      }
+
+      if (isUuid) {
+        const csRes = await pool.query(
+          `SELECT importance FROM career_skills WHERE career_id = $1 AND skill_id = $2`,
+          [careerId, skill.id]
+        );
+        if (csRes.rows[0]) importance = csRes.rows[0].importance;
+      }
+    }
+
+    const learningLevel = classifySkillLevel(skill.name, skill.learning_level, careerTitle);
+    const metadata = (skill.learning_metadata && Object.keys(skill.learning_metadata).length > 0)
+      ? skill.learning_metadata
+      : buildLearningMetadata({ ...skill, learning_level: learningLevel, importance }, careerTitle);
+
+    // Optional user personalization
+    let personalization = {
+      user_status: 'not_reported',
+      is_demonstrated: false,
+      readiness_notes: 'Log in or view profile to check personalized readiness.',
+      is_recommended_next: false
+    };
+
+    const authHeader = req.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.slice(7).trim();
+        const payload = jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] });
+        if (payload?.sub) {
+          const userId = payload.sub;
+          const [userSkills, customSkillsRes, profileRes] = await Promise.all([
+            getUserSkills(userId),
+            pool.query(`SELECT id, name, level FROM user_custom_skills WHERE user_id = $1`, [userId]),
+            pool.query(`SELECT career_goal, education, experience, current_goal FROM user_profiles WHERE user_id = $1`, [userId])
+          ]);
+
+          const userSkillsMap = new Map();
+          for (const s of userSkills) {
+            userSkillsMap.set(normalizeString(s.name), s);
+            if (s.id) userSkillsMap.set(s.id, s);
+          }
+          for (const s of customSkillsRes.rows) {
+            userSkillsMap.set(normalizeString(s.name), { ...s, verified: false, is_custom: true });
+            if (s.id) userSkillsMap.set(s.id, { ...s, verified: false, is_custom: true });
+          }
+
+          personalization = personalizeSkill({
+            skill: { ...skill, learning_level: learningLevel, learning_metadata: metadata },
+            careerTitle,
+            userSkillsMap,
+            userProfile: profileRes.rows[0] || {}
+          });
+        }
+      } catch {}
+    }
+
+    res.json({
+      data: {
+        id: skill.id,
+        name: skill.name,
+        learning_level: learningLevel,
+        level_number: learningLevel === 'foundational' ? 1 : (learningLevel === 'advanced' ? 3 : 2),
+        importance: importance,
+        learning_metadata: metadata,
+        ...personalization
+      }
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
 export default router;
+

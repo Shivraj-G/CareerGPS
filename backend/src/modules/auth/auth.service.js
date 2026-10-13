@@ -47,18 +47,22 @@ export async function verifyRefreshToken(token) {
   return { id: row.user_id, role: row.role };
 }
 
-export async function register({ email, password }) {
+export async function register({ email, password, full_name, name }) {
   const passwordHash = await bcrypt.hash(password, 12);
+  const resolvedFullName = (full_name || name || '').trim() || null;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const userResult = await client.query(
-      `INSERT INTO users (email, password_hash) VALUES ($1, $2)
-       RETURNING id, email, role, account_status, created_at, updated_at`,
-      [email, passwordHash]
+      `INSERT INTO users (email, password_hash, full_name) VALUES ($1, $2, $3)
+       RETURNING id, email, role, full_name, account_status, created_at, updated_at`,
+      [email, passwordHash, resolvedFullName]
     );
     const user = userResult.rows[0];
-    await client.query('INSERT INTO user_profiles (user_id) VALUES ($1)', [user.id]);
+    await client.query(
+      'INSERT INTO user_profiles (user_id, full_name) VALUES ($1, $2)',
+      [user.id, resolvedFullName]
+    );
     await client.query('COMMIT');
     const refreshToken = await createRefreshToken(user.id);
     return { user, accessToken: signAccessToken(user), refreshToken };
@@ -78,15 +82,27 @@ export async function register({ email, password }) {
 
 export async function login({ email, password }) {
   const result = await pool.query(
-    `SELECT id, email, password_hash, role, account_status, created_at, updated_at
-     FROM users WHERE email = $1`,
+    `SELECT u.id, u.email, u.password_hash, u.role, u.account_status,
+            COALESCE(p.full_name, u.full_name) AS full_name,
+            u.created_at, u.updated_at
+     FROM users u
+     LEFT JOIN user_profiles p ON p.user_id = u.id
+     WHERE u.email = $1`,
     [email]
   );
   const user = result.rows[0];
-  if (!user || !(await bcrypt.compare(password, user.password_hash))) {
-    const error = new Error('Invalid email or password.');
+  if (!user) {
+    // Note: Explicitly revealing whether an email is registered enables account enumeration.
+    // This is an intentional product requirement to improve UX. Existing rate limiting helps mitigate abuse.
+    const error = new Error('This email is not registered with CareerGPS.');
     error.statusCode = 401;
-    error.code = 'INVALID_CREDENTIALS';
+    error.code = 'UNKNOWN_EMAIL';
+    throw error;
+  }
+  if (!(await bcrypt.compare(password, user.password_hash))) {
+    const error = new Error('Incorrect password. Please try again.');
+    error.statusCode = 401;
+    error.code = 'INVALID_PASSWORD';
     throw error;
   }
   if (user.account_status !== 'active') {

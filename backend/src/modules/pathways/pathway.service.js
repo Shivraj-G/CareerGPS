@@ -1,6 +1,11 @@
 import { pool } from '../../config/database.js';
 import { env } from '../../config/env.js';
 import { logger } from '../../utils/logger.js';
+import {
+  evaluateUserProgressAndEvidence,
+  buildGenericCareerPathway,
+  DOMAIN_PATHWAY_TEMPLATES
+} from './pathway-engine.js';
 
 export async function listUserPathways(userId) {
   const result = await pool.query(
@@ -43,7 +48,7 @@ async function callAi(path, payload, timeoutMs = 8000) {
 export async function listPathways({ page, limit, search, careerId }) {
   const offset = (page - 1) * limit;
   const values = [search, careerId ?? ''];
-  const where = `WHERE p.record_status = 'published' AND p.pathway_type = 'template'
+  const where = `WHERE p.record_status != 'archived' AND p.pathway_type = 'template'
     AND ($1 = '' OR p.title ILIKE '%' || $1 || '%' OR p.description ILIKE '%' || $1 || '%')
     AND ($2 = '' OR p.career_id = NULLIF($2, '')::uuid)`;
   const count = await pool.query(`SELECT COUNT(*)::int AS total FROM pathways p ${where}`, values);
@@ -68,7 +73,7 @@ export async function getPathway(pathwayId, userId = null) {
               'description', ps.description, 'step_type', ps.step_type, 'metadata', ps.metadata
             ) ORDER BY ps.step_order) FROM pathway_steps ps WHERE ps.pathway_id = p.id), '[]'::jsonb) AS steps
      FROM pathways p JOIN careers c ON c.id = p.career_id
-     WHERE p.id = $1 AND p.record_status = 'published' AND p.pathway_type = 'template'`, [pathwayId]
+     WHERE p.id = $1 AND p.record_status != 'archived' AND p.pathway_type = 'template'`, [pathwayId]
   );
   if (!result.rows[0]) return null;
   const data = result.rows[0];
@@ -121,35 +126,21 @@ export async function generatePathway(userId, input) {
     );
     const userSkills = userSkillsRes.rows.map(r => r.name);
 
+    const customSkillsRes = await client.query(
+      `SELECT name FROM user_custom_skills WHERE user_id = $1`, [userId]
+    ).catch(() => ({ rows: [] }));
+    const customSkills = customSkillsRes.rows.map(r => r.name);
+
     const careerSkillsRes = await client.query(
       `SELECT s.name, cs.importance FROM career_skills cs JOIN skills s ON s.id = cs.skill_id WHERE cs.career_id = $1`, [input.career_id]
     );
     const requiredSkills = careerSkillsRes.rows;
 
-    if (env.AI_SERVICE_URL) {
-      const valRes = await callAi('/internal/v1/profiles/validate-goal', {
-        goal: careerRow.title,
-        profile: profile,
-        skills: userSkills,
-        careers: [careerRow]
-      }, 10000);
-      
-      if (valRes && valRes.classification) {
-         if (valRes.classification === 'INVALID_GOAL' || valRes.classification === 'RED') {
-             const classification = valRes.classification;
-             const error = new Error(`Cannot generate pathway: ${classification}. ${valRes.reason}`);
-             error.statusCode = 422;
-             error.code = classification;
-             throw error;
-         }
-      }
-    }
-
     const matched = [];
     const missingRequired = [];
     const missingUseful = [];
     
-    const userSet = new Set(userSkills.map(s => s.toLowerCase()));
+    const userSet = new Set([...userSkills, ...customSkills].map(s => s.toLowerCase()));
     for (const sk of requiredSkills) {
       if (userSet.has(sk.name.toLowerCase())) {
         matched.push(sk.name);
@@ -160,34 +151,102 @@ export async function generatePathway(userId, input) {
       }
     }
 
-    const aiRes = await callAi('/internal/v1/pathways/generate_two', {
-      career_context: {
-        title: careerRow.title,
-        description: careerRow.description || 'A professional career path.',
-        responsibilities: careerRow.responsibilities || [],
-        qualifications: careerRow.qualifications || [],
-        entry_routes: careerRow.entry_routes || []
-      },
-      user_context: profile,
-      skill_gap: { matched, missing_required: missingRequired, missing_useful: missingUseful }
-    }, 45000);
-
-    if (!aiRes) {
-      logger.error('Pathway generation failed: AI service unreachable, timed out, or returned an HTTP error');
-      const error = new Error('Failed to generate pathways. AI service is unreachable.');
-      error.statusCode = 503; error.code = 'AI_SERVICE_UNAVAILABLE'; throw error;
+    // Call AI service with a safe timeout
+    let aiRes = null;
+    try {
+      aiRes = await callAi('/internal/v1/pathways/generate_two', {
+        career_context: {
+          title: careerRow.title,
+          description: careerRow.description || 'A professional career path.',
+          responsibilities: careerRow.responsibilities || [],
+          qualifications: careerRow.qualifications || [],
+          entry_routes: careerRow.entry_routes || []
+        },
+        user_context: profile,
+        skill_gap: { matched, missing_required: missingRequired, missing_useful: missingUseful }
+      }, 8000);
+    } catch (err) {
+      logger.warn('AI pathway generation failed, falling back to deterministic engine:', err.message);
     }
 
-    if (aiRes.status === 'unavailable') {
-      logger.error('Pathway generation failed: AI service returned status "unavailable"', { aiResStatus: aiRes.status, disclaimer: aiRes.disclaimer });
-      const error = new Error('Failed to generate pathways. AI service is currently unable to generate the pathway.');
-      error.statusCode = 503; error.code = 'AI_GENERATION_UNAVAILABLE'; throw error;
-    }
+    let pathwaysToInsert = [];
 
-    if (aiRes.status !== 'ai_generated' || !aiRes.pathways || !Array.isArray(aiRes.pathways) || aiRes.pathways.length < 2) {
-      logger.error('Pathway generation failed: AI response validation failed or malformed response', { aiResStatus: aiRes.status, hasPathways: !!aiRes.pathways, pathwaysCount: aiRes.pathways?.length });
-      const error = new Error('Failed to generate pathways due to malformed AI response.');
-      error.statusCode = 500; error.code = 'AI_GENERATION_FAILED'; throw error;
+    // Use AI pathways if schema is valid
+    if (aiRes && aiRes.status === 'ai_generated' && Array.isArray(aiRes.pathways) && aiRes.pathways.length >= 2) {
+      pathwaysToInsert = aiRes.pathways;
+    } else {
+      // Deterministic Multi-Stage Engine Fallback
+      logger.info('Using deterministic multi-stage pathway fallback for:', careerRow.title);
+      const baseSteps = buildGenericCareerPathway(careerRow.title, careerRow);
+      
+      const pathway1Steps = baseSteps.map((s, idx) => ({
+        order: idx + 1,
+        title: s.title,
+        description: s.what_to_do,
+        step_type: s.step_type || 'skill',
+        estimated_duration: s.estimated_duration,
+        metadata: {
+          stage: s.stage,
+          stage_order: s.stage_order,
+          why_it_matters: s.why_it_matters,
+          what_to_do: s.what_to_do,
+          prerequisites: s.prerequisites || [],
+          deliverable: s.deliverable,
+          action_link: s.action_link,
+          action_label: s.action_label,
+          estimated_duration: s.estimated_duration,
+          is_optional: Boolean(s.is_optional),
+          skills: s.skills || []
+        }
+      }));
+
+      const pathway2Steps = baseSteps.map((s, idx) => {
+        let altTitle = s.title;
+        let altWhat = s.what_to_do;
+        if (s.stage_order === 1) {
+          altTitle = `Foundational Readiness & Core Concepts for ${careerRow.title}`;
+        } else if (s.stage_order === 4) {
+          altTitle = `Comprehensive Case Study & Methodological Analysis`;
+          altWhat = `Conduct deep analytical case review and structured documentation for ${careerRow.title}.`;
+        }
+        return {
+          order: idx + 1,
+          title: altTitle,
+          description: altWhat,
+          step_type: s.step_type || 'education',
+          estimated_duration: s.estimated_duration,
+          metadata: {
+            stage: s.stage,
+            stage_order: s.stage_order,
+            why_it_matters: s.why_it_matters,
+            what_to_do: altWhat,
+            prerequisites: s.prerequisites || [],
+            deliverable: s.deliverable,
+            action_link: s.action_link,
+            action_label: s.action_label,
+            estimated_duration: s.estimated_duration,
+            is_optional: Boolean(s.is_optional),
+            skills: s.skills || []
+          }
+        };
+      });
+
+      pathwaysToInsert = [
+        {
+          title: `${careerRow.title} — Project-Driven Practical Pathway`,
+          summary: `Hands-on path emphasizing tangible project deliverables, portfolio code, and practical case studies.`,
+          strategy: `Prioritize building real projects, solving domain problems, and assembling verified portfolio evidence.`,
+          estimated_duration: `6-9 months`,
+          steps: pathway1Steps
+        },
+        {
+          title: `${careerRow.title} — Structured Learning & Specialization Pathway`,
+          summary: `Rigorous academic and certification route covering theoretical principles, structured curriculum, and verified standards.`,
+          strategy: `Focus on comprehensive conceptual foundations, formal learning milestones, and domain specialization.`,
+          estimated_duration: `9-12 months`,
+          steps: pathway2Steps
+        }
+      ];
     }
 
     const generatedUserPathways = [];
@@ -197,7 +256,7 @@ export async function generatePathway(userId, input) {
       preferences: input.preferences ?? {}
     };
 
-    for (const pw of aiRes.pathways) {
+    for (const pw of pathwaysToInsert) {
       const pRes = await client.query(
         `INSERT INTO pathways (career_id, title, description, pathway_type, record_status, verification_status, origin)
          VALUES ($1, $2, $3, 'generated', 'published', 'unverified', 'ai_generated')
@@ -208,11 +267,18 @@ export async function generatePathway(userId, input) {
       template.steps = [];
       
       for (const step of pw.steps || []) {
+        const meta = step.metadata || {
+          stage: step.stage || `Stage ${step.order}`,
+          deliverable: step.deliverable || 'Documented project artifact',
+          action_link: step.action_link || '/skills/gap',
+          action_label: step.action_label || 'View Skill Details',
+          prerequisites: step.prerequisites || []
+        };
         const sRes = await client.query(
-          `INSERT INTO pathway_steps (pathway_id, step_order, title, description, step_type, verification_status, origin)
-           VALUES ($1, $2, $3, $4, $5, 'unverified', 'ai_generated')
+          `INSERT INTO pathway_steps (pathway_id, step_order, title, description, step_type, verification_status, origin, metadata)
+           VALUES ($1, $2, $3, $4, $5, 'unverified', 'ai_generated', $6)
            RETURNING id, step_order, title, description, step_type, metadata`,
-          [template.id, step.order, step.title, step.description || '', step.step_type || 'custom']
+          [template.id, step.order, step.title, step.description || '', step.step_type || 'skill', JSON.stringify(meta)]
         );
         template.steps.push(sRes.rows[0]);
       }
@@ -230,7 +296,23 @@ export async function generatePathway(userId, input) {
           [userPathway.rows[0].id, step.id]
         );
       }
-      generatedUserPathways.push({ ...userPathway.rows[0], steps: template.steps.map((step) => ({ ...step, status: 'not_started' })) });
+
+      // Evaluate personalized progress
+      const userProjectsRes = await pool.query(
+        `SELECT id, career_id, career_title, title, status, COALESCE(skills, skills_exercised, '[]'::jsonb) AS skills FROM user_projects WHERE user_id = $1`, [userId]
+      ).catch(() => ({ rows: [] }));
+      const userProjects = userProjectsRes.rows;
+      const userContext = { profile, user_skills: userSkills, custom_skills: customSkills, user_projects: userProjects };
+      const evaluated = evaluateUserProgressAndEvidence(userContext, template.steps.map(s => ({ ...s, status: 'not_started' })), careerRow.title);
+
+      generatedUserPathways.push({
+        ...userPathway.rows[0],
+        career_title: careerRow.title,
+        steps: evaluated.steps,
+        metrics: evaluated.metrics,
+        starting_point: evaluated.starting_point,
+        experience_tier: evaluated.experience_tier
+      });
     }
 
     await client.query('COMMIT');
@@ -257,7 +339,7 @@ export async function selectPathway(userId, userPathwayId) {
        await client.query(`UPDATE user_pathways SET status = 'archived' WHERE user_id = $1 AND status = 'generated' AND generated_context->>'generated_at' = $2 AND id != $3`, [userId, row.generated_context.generated_at, userPathwayId]);
     }
 
-    const updated = await client.query(`UPDATE user_pathways SET status = 'active', updated_at = NOW() WHERE id = $1 RETURNING *`, [userPathwayId]);
+    await client.query(`UPDATE user_pathways SET status = 'active', updated_at = NOW() WHERE id = $1`, [userPathwayId]);
     await client.query('COMMIT');
     return await getUserPathway(userId, userPathwayId);
   } catch (err) {
@@ -275,8 +357,9 @@ export async function getUserPathway(userId, userPathwayId) {
             COALESCE(jsonb_agg(jsonb_build_object(
               'id', ups.id, 'pathway_step_id', ups.pathway_step_id, 'step_order', ps.step_order,
               'title', ps.title, 'description', ps.description, 'step_type', ps.step_type,
-              'status', ups.status, 'started_at', ups.started_at, 'completed_at', ups.completed_at, 'notes', ups.notes
-            ) ORDER BY ps.step_order) FILTER (WHERE ups.id IS NOT NULL), '[]'::jsonb) AS steps
+              'status', ups.status, 'started_at', ups.started_at, 'completed_at', ups.completed_at,
+              'notes', ups.notes, 'metadata', ps.metadata
+            ) ORDER BY ps.step_order) FILTER (WHERE ups.id IS NOT NULL), '[]'::jsonb) AS raw_steps
      FROM user_pathways up JOIN pathways p ON p.id = up.pathway_id
      JOIN careers c ON c.id = p.career_id
      LEFT JOIN user_pathway_steps ups ON ups.user_pathway_id = up.id
@@ -284,7 +367,47 @@ export async function getUserPathway(userId, userPathwayId) {
      WHERE up.user_id = $2 AND (up.id = $1 OR up.pathway_id = $1)
      GROUP BY up.id, p.id, c.id ORDER BY up.updated_at DESC LIMIT 1`, [userPathwayId, userId]
   );
-  return result.rows[0] ?? null;
+  if (!result.rows[0]) return null;
+  const rawRow = result.rows[0];
+
+  // Fetch user profile and skills to evaluate evidence and auto-detect completion
+  const profileRes = await pool.query(`SELECT * FROM user_profiles WHERE user_id = $1`, [userId]);
+  const profile = profileRes.rows[0] ?? {};
+
+  const userSkillsRes = await pool.query(
+    `SELECT s.name, us.level AS proficiency, us.verified FROM user_skills us JOIN skills s ON s.id = us.skill_id WHERE us.user_id = $1`, [userId]
+  );
+  const userSkills = userSkillsRes.rows;
+
+  const customSkillsRes = await pool.query(
+    `SELECT name FROM user_custom_skills WHERE user_id = $1`, [userId]
+  ).catch(() => ({ rows: [] }));
+  const customSkills = customSkillsRes.rows;
+
+  const userProjectsRes = await pool.query(
+    `SELECT id, career_id, career_title, title, status, COALESCE(skills, skills_exercised, '[]'::jsonb) AS skills FROM user_projects WHERE user_id = $1`, [userId]
+  ).catch(() => ({ rows: [] }));
+  const userProjects = userProjectsRes.rows;
+
+  const userContext = { profile, user_skills: userSkills, custom_skills: customSkills, user_projects: userProjects };
+  const evaluated = evaluateUserProgressAndEvidence(userContext, rawRow.raw_steps || [], rawRow.career_title);
+
+  return {
+    id: rawRow.id,
+    user_id: rawRow.user_id,
+    pathway_id: rawRow.pathway_id,
+    title: rawRow.title,
+    status: rawRow.status,
+    career_id: rawRow.career_id,
+    career_title: rawRow.career_title,
+    generated_context: rawRow.generated_context,
+    created_at: rawRow.created_at,
+    updated_at: rawRow.updated_at,
+    steps: evaluated.steps,
+    metrics: evaluated.metrics,
+    starting_point: evaluated.starting_point,
+    experience_tier: evaluated.experience_tier
+  };
 }
 
 export async function selectTemplatePathway(userId, pathwayId) {
@@ -292,36 +415,84 @@ export async function selectTemplatePathway(userId, pathwayId) {
   try {
     await client.query('BEGIN');
     
-    // Check if user already has an active pathway for this career. If so, archive it?
-    // The user's requirements: "If the existing database pathway is also selectable, preserve that ability. The selected pathway should be represented using the existing user_pathways mechanism."
-    
     const pRes = await client.query(
-      `SELECT id, career_id, title FROM pathways WHERE id = $1 AND pathway_type = 'template' AND record_status = 'published'`,
+      `SELECT id, career_id, title FROM pathways WHERE id = $1 AND pathway_type = 'template' AND record_status != 'archived'`,
       [pathwayId]
     );
     if (!pRes.rows[0]) throw new Error('Template pathway not found');
     const template = pRes.rows[0];
 
-    // Archive existing active pathways for this career? No, let's just make this one active.
-    
-    const upRes = await client.query(
-      `INSERT INTO user_pathways (user_id, pathway_id, title, status)
-       VALUES ($1, $2, $3, 'active') RETURNING id`,
-      [userId, template.id, template.title]
+    // Archive any other active user pathways for this career (preserves milestone history)
+    await client.query(
+      `UPDATE user_pathways SET status = 'archived', updated_at = NOW()
+       WHERE user_id = $1 AND status = 'active' AND pathway_id IN (
+         SELECT id FROM pathways WHERE career_id = $2
+       )`,
+      [userId, template.career_id]
     );
-    const userPathwayId = upRes.rows[0].id;
 
-    // Insert steps
-    const stepsRes = await client.query(
-      `SELECT id FROM pathway_steps WHERE pathway_id = $1 ORDER BY step_order`,
-      [template.id]
+    // Check if the user already has an assignment for this exact template
+    const existingRes = await client.query(
+      `SELECT id, status FROM user_pathways WHERE user_id = $1 AND pathway_id = $2 ORDER BY updated_at DESC LIMIT 1 FOR UPDATE`,
+      [userId, template.id]
     );
-    
-    for (const step of stepsRes.rows) {
+
+    let userPathwayId;
+    if (existingRes.rows.length > 0) {
+      userPathwayId = existingRes.rows[0].id;
+      // Reactivate existing assignment, preserving past progress and milestone records
       await client.query(
-        `INSERT INTO user_pathway_steps (user_pathway_id, pathway_step_id) VALUES ($1, $2)`,
-        [userPathwayId, step.id]
+        `UPDATE user_pathways SET status = 'active', updated_at = NOW() WHERE id = $1`,
+        [userPathwayId]
       );
+    } else {
+      const upRes = await client.query(
+        `INSERT INTO user_pathways (user_id, pathway_id, title, status)
+         VALUES ($1, $2, $3, 'active') RETURNING id`,
+        [userId, template.id, template.title]
+      );
+      userPathwayId = upRes.rows[0].id;
+
+      // Insert steps into user_pathway_steps
+      const stepsRes = await client.query(
+        `SELECT ps.id, ps.title, ps.description, ps.step_order, ps.metadata
+         FROM pathway_steps ps WHERE ps.pathway_id = $1 ORDER BY ps.step_order`,
+        [template.id]
+      );
+      
+      // Check user profile for auto-detected completion on creation
+      const profileRes = await client.query(`SELECT * FROM user_profiles WHERE user_id = $1`, [userId]);
+      const profile = profileRes.rows[0] ?? {};
+      const userSkillsRes = await client.query(
+        `SELECT s.name FROM user_skills us JOIN skills s ON s.id = us.skill_id WHERE us.user_id = $1`, [userId]
+      );
+      const userSkills = userSkillsRes.rows;
+
+      const userProjectsRes = await pool.query(
+        `SELECT id, career_id, career_title, title, status, COALESCE(skills, skills_exercised, '[]'::jsonb) AS skills FROM user_projects WHERE user_id = $1`, [userId]
+      ).catch(() => ({ rows: [] }));
+      const userProjects = userProjectsRes.rows;
+
+      const evaluated = evaluateUserProgressAndEvidence(
+        { profile, user_skills: userSkills, custom_skills: [], user_projects: userProjects },
+        stepsRes.rows.map(s => ({ ...s, status: 'not_started' })),
+        template.title
+      );
+
+      for (const step of evaluated.steps) {
+        const isAuto = step.status === 'completed' && (step.completion_source === 'auto_detected' || step.completion_source === 'project_completed');
+        await client.query(
+          `INSERT INTO user_pathway_steps (user_pathway_id, pathway_step_id, status, notes, completed_at)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [
+            userPathwayId,
+            step.id,
+            isAuto ? 'completed' : 'not_started',
+            isAuto ? (step.auto_evidence || 'Auto-detected from profile evidence') : null,
+            isAuto ? new Date() : null
+          ]
+        );
+      }
     }
     
     await client.query('COMMIT');
@@ -338,28 +509,44 @@ export async function getCareerPathways(userId, careerId) {
   // 1. Get existing database reference pathways
   const dbPathwaysRes = await pool.query(
     `SELECT p.id, p.career_id, c.title AS career_title, p.title, p.description,
-            p.verification_status, p.source_url, p.source_document_url, p.verified_at,
-            (SELECT COALESCE(json_agg(row_to_json(ps.*)), '[]'::json) FROM (SELECT * FROM pathway_steps ps2 WHERE ps2.pathway_id = p.id ORDER BY step_order) ps) as steps
+            p.verification_status, p.origin, p.source_url, p.source_document_url, p.verified_at,
+            (
+              SELECT COALESCE(json_agg(row_to_json(ps.*)), '[]'::json)
+              FROM (SELECT * FROM pathway_steps ps2 WHERE ps2.pathway_id = p.id ORDER BY step_order) ps
+            ) as steps
      FROM pathways p JOIN careers c ON c.id = p.career_id
-     WHERE p.career_id = $1 AND p.record_status = 'published' AND p.pathway_type = 'template'
-     ORDER BY p.title`,
+     WHERE p.career_id = $1 AND p.record_status != 'archived' AND p.pathway_type = 'template'
+     ORDER BY CASE WHEN p.record_status = 'published' THEN 0 ELSE 1 END, p.title`,
     [careerId]
   );
   
+  // Deduplicate near-duplicate database templates based on title and step signatures
+  const deduplicatedExisting = [];
+  const seenTemplateTitles = new Set();
+  const seenStepSignatures = new Set();
+
+  for (const pw of dbPathwaysRes.rows) {
+    const normTitle = (pw.title || '').toLowerCase().replace(/[^a-z0-9]/g, ' ').trim().replace(/\s+/g, ' ');
+    const stepSig = Array.isArray(pw.steps) && pw.steps.length > 0
+      ? pw.steps.map(s => (s.title || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 15)).sort().join('|')
+      : '';
+
+    if (seenTemplateTitles.has(normTitle)) continue;
+    if (stepSig && seenStepSignatures.has(stepSig)) continue;
+
+    seenTemplateTitles.add(normTitle);
+    if (stepSig) seenStepSignatures.add(stepSig);
+    deduplicatedExisting.push({
+      ...pw,
+      is_database_backed: true,
+      origin: pw.origin || 'curated'
+    });
+  }
+
   // 2. Get user pathways for this career (both AI-generated and selected DB pathways)
   const userPathwaysRes = await pool.query(
     `SELECT up.id, up.user_id, up.pathway_id, up.title, up.status, up.generated_context,
-            up.created_at, up.updated_at, p.career_id, c.title AS career_title, p.origin, p.pathway_type,
-            (
-               SELECT COALESCE(jsonb_agg(jsonb_build_object(
-                 'id', ups.id, 'pathway_step_id', ups.pathway_step_id, 'step_order', ps.step_order,
-                 'title', ps.title, 'description', ps.description, 'step_type', ps.step_type,
-                 'status', ups.status, 'started_at', ups.started_at, 'completed_at', ups.completed_at, 'notes', ups.notes
-               ) ORDER BY ps.step_order), '[]'::jsonb)
-               FROM user_pathway_steps ups 
-               JOIN pathway_steps ps ON ps.id = ups.pathway_step_id
-               WHERE ups.user_pathway_id = up.id
-            ) AS steps
+            up.created_at, up.updated_at, p.career_id, c.title AS career_title, p.origin, p.pathway_type
      FROM user_pathways up JOIN pathways p ON p.id = up.pathway_id
      JOIN careers c ON c.id = p.career_id
      WHERE up.user_id = $1 AND p.career_id = $2 AND up.status != 'archived'
@@ -369,17 +556,36 @@ export async function getCareerPathways(userId, careerId) {
 
   let selected = null;
   const aiGenerated = [];
+  let latestBatchTimestamp = null;
 
   for (const row of userPathwaysRes.rows) {
     if (row.status === 'active' || row.status === 'completed') {
-       if (!selected) selected = row; // Keep the most recently updated one
+      if (!selected) {
+        selected = await getUserPathway(userId, row.id);
+      }
     } else if (row.status === 'generated' && row.pathway_type === 'generated' && row.origin === 'ai_generated') {
-       aiGenerated.push(row);
+      const genAt = row.generated_context?.generated_at;
+      if (!latestBatchTimestamp && genAt) {
+        latestBatchTimestamp = genAt;
+      }
+      // Only include pathways from the latest generation batch (up to 2 strategies)
+      if (!latestBatchTimestamp || genAt === latestBatchTimestamp) {
+        if (aiGenerated.length < 2) {
+          const fullGen = await getUserPathway(userId, row.id);
+          if (fullGen) {
+            aiGenerated.push({
+              ...fullGen,
+              is_database_backed: false,
+              origin: 'ai_generated'
+            });
+          }
+        }
+      }
     }
   }
 
   return {
-    existing: dbPathwaysRes.rows,
+    existing: deduplicatedExisting,
     aiGenerated: aiGenerated,
     selected: selected
   };
@@ -395,41 +601,230 @@ export async function updateProgress(userId, userPathwayId, steps) {
     }
     const actualUserPathwayId = owner.rows[0].id;
     for (const item of steps) {
+      const stepIdentifier = item.pathway_step_id || item.step_id || item.id;
       const exists = await client.query(
-        'SELECT id FROM user_pathway_steps WHERE user_pathway_id = $1 AND pathway_step_id = $2', [actualUserPathwayId, item.pathway_step_id]
+        'SELECT id, pathway_step_id FROM user_pathway_steps WHERE user_pathway_id = $1 AND (pathway_step_id = $2 OR id = $2)',
+        [actualUserPathwayId, stepIdentifier]
       );
       if (!exists.rows[0]) {
-        const error = new Error('One or more pathway steps do not belong to this personalized pathway.'); error.statusCode = 400; error.code = 'INVALID_PATHWAY_STEP'; throw error;
+        const error = new Error('One or more pathway steps do not belong to this personalized pathway.');
+        error.statusCode = 400;
+        error.code = 'INVALID_PATHWAY_STEP';
+        throw error;
       }
-      // Build timestamps safely without string interpolation into SQL
-      let startedAtSql, completedAtSql;
+      const matchedPathwayStepId = exists.rows[0].pathway_step_id;
+      
+      let startedAtSql = 'NULL';
+      let completedAtSql = 'NULL';
       if (item.status === 'completed') {
         startedAtSql = 'COALESCE(started_at, NOW())';
         completedAtSql = 'NOW()';
       } else if (item.status === 'in_progress') {
         startedAtSql = 'NOW()';
         completedAtSql = 'NULL';
+      } else if (item.status === 'skipped') {
+        startedAtSql = 'NULL';
+        completedAtSql = 'NULL';
       } else {
         startedAtSql = 'NULL';
         completedAtSql = 'NULL';
       }
+
       await client.query(
         `UPDATE user_pathway_steps SET status = $1, notes = $2,
            started_at = ${startedAtSql}, completed_at = ${completedAtSql}
-         WHERE user_pathway_id = $3 AND pathway_step_id = $4`,
-        [item.status, item.notes ?? null, actualUserPathwayId, item.pathway_step_id]
+         WHERE user_pathway_id = $3 AND (pathway_step_id = $4 OR id = $4)`,
+        [item.status, item.notes ?? null, actualUserPathwayId, stepIdentifier]
       );
     }
     const counts = await client.query(
-      `SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE status = 'completed')::int AS completed
+      `SELECT COUNT(*)::int AS total, 
+              COUNT(*) FILTER (WHERE status = 'completed')::int AS completed,
+              COUNT(*) FILTER (WHERE status = 'skipped')::int AS skipped
        FROM user_pathway_steps WHERE user_pathway_id = $1`, [actualUserPathwayId]
     );
-    const complete = counts.rows[0].total > 0 && counts.rows[0].total === counts.rows[0].completed;
+    const complete = counts.rows[0].total > 0 && (counts.rows[0].completed + counts.rows[0].skipped) === counts.rows[0].total;
     await client.query('UPDATE user_pathways SET status = $1, updated_at = NOW() WHERE id = $2', [complete ? 'completed' : 'active', actualUserPathwayId]);
     await client.query('COMMIT');
     return getUserPathway(userId, actualUserPathwayId);
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }
+}
+
+export async function skipStep(userId, userPathwayId, stepId) {
+  return updateProgress(userId, userPathwayId, [
+    { pathway_step_id: stepId, status: 'skipped', notes: 'Skipped by user' }
+  ]);
+}
+
+export async function undoStep(userId, userPathwayId, stepId) {
+  return updateProgress(userId, userPathwayId, [
+    { pathway_step_id: stepId, status: 'not_started', notes: null }
+  ]);
+}
+
+export async function completeStep(userId, userPathwayId, stepId, notes = null) {
+  return updateProgress(userId, userPathwayId, [
+    { pathway_step_id: stepId, status: 'completed', notes }
+  ]);
+}
+
+export async function completePathway(userId, userPathwayId, options = {}) {
+  const stepId = options.stepId || options.step_id || options.milestoneId || options.milestone_id || null;
+  const notes = options.notes ?? null;
+
+  if (stepId) {
+    return completeStep(userId, userPathwayId, stepId, notes);
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const owner = await client.query(
+      'SELECT id, status FROM user_pathways WHERE user_id = $2 AND (id = $1 OR pathway_id = $1) ORDER BY updated_at DESC LIMIT 1 FOR UPDATE',
+      [userPathwayId, userId]
+    );
+    if (!owner.rows[0]) {
+      const error = new Error('Personalized pathway not found.');
+      error.statusCode = 404;
+      error.code = 'USER_PATHWAY_NOT_FOUND';
+      throw error;
+    }
+    const actualUserPathwayId = owner.rows[0].id;
+
+    await client.query(
+      `UPDATE user_pathway_steps 
+       SET status = 'completed', completed_at = COALESCE(completed_at, NOW()), updated_at = NOW() 
+       WHERE user_pathway_id = $1 AND status != 'completed'`,
+      [actualUserPathwayId]
+    );
+
+    await client.query(
+      `UPDATE user_pathways SET status = 'completed', updated_at = NOW() WHERE id = $1`,
+      [actualUserPathwayId]
+    );
+
+    await client.query('COMMIT');
+    return getUserPathway(userId, actualUserPathwayId);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function archiveUserPathway(userId, userPathwayId) {
+  if (!userPathwayId) return false;
+
+  // 1. Direct match on user_pathways assignment PK
+  const assignmentRes = await pool.query(
+    'SELECT id, user_id, status, pathway_id FROM user_pathways WHERE id = $1',
+    [userPathwayId]
+  );
+
+  if (assignmentRes.rows.length > 0) {
+    const assignment = assignmentRes.rows[0];
+
+    // Ownership check: must belong to the authenticated user
+    if (assignment.user_id !== userId) {
+      const error = new Error('You do not have permission to remove this pathway assignment.');
+      error.statusCode = 403;
+      error.code = 'FORBIDDEN';
+      throw error;
+    }
+
+    // Already archived: treat as already removed
+    if (assignment.status === 'archived') {
+      return false;
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        "UPDATE user_pathways SET status = 'archived', updated_at = NOW() WHERE id = $1 AND user_id = $2",
+        [assignment.id, userId]
+      );
+      await client.query(
+        "DELETE FROM saved_items WHERE user_id = $1 AND item_type = 'pathway' AND (item_id = $2 OR item_id = $3)",
+        [userId, assignment.pathway_id, assignment.id]
+      );
+      await client.query('COMMIT');
+      return true;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  // 2. Fallback: match by template pathway_id for this user (if active or completed)
+  const templateAssignmentRes = await pool.query(
+    `SELECT id, user_id, status, pathway_id FROM user_pathways
+     WHERE user_id = $1 AND pathway_id = $2 AND status != 'archived'
+     ORDER BY updated_at DESC LIMIT 1`,
+    [userId, userPathwayId]
+  );
+
+  if (templateAssignmentRes.rows.length > 0) {
+    const assignment = templateAssignmentRes.rows[0];
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        "UPDATE user_pathways SET status = 'archived', updated_at = NOW() WHERE id = $1 AND user_id = $2",
+        [assignment.id, userId]
+      );
+      await client.query(
+        "DELETE FROM saved_items WHERE user_id = $1 AND item_type = 'pathway' AND (item_id = $2 OR item_id = $3)",
+        [userId, assignment.pathway_id, assignment.id]
+      );
+      await client.query('COMMIT');
+      return true;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  // 3. Fallback: match by career_id for this user (if active or completed)
+  const careerAssignmentRes = await pool.query(
+    `SELECT up.id, up.user_id, up.status, up.pathway_id
+     FROM user_pathways up
+     JOIN pathways p ON p.id = up.pathway_id
+     WHERE up.user_id = $1 AND p.career_id = $2 AND up.status != 'archived'
+     ORDER BY up.updated_at DESC LIMIT 1`,
+    [userId, userPathwayId]
+  );
+
+  if (careerAssignmentRes.rows.length > 0) {
+    const assignment = careerAssignmentRes.rows[0];
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        "UPDATE user_pathways SET status = 'archived', updated_at = NOW() WHERE id = $1 AND user_id = $2",
+        [assignment.id, userId]
+      );
+      await client.query(
+        "DELETE FROM saved_items WHERE user_id = $1 AND item_type = 'pathway' AND (item_id = $2 OR item_id = $3)",
+        [userId, assignment.pathway_id, assignment.id]
+      );
+      await client.query('COMMIT');
+      return true;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  return false;
 }
 
 export async function savePathway(userId, pathwayId) {

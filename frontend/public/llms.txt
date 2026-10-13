@@ -1,6 +1,6 @@
-# CareerGPS Goa
+# NaviGoa Goa
 
-CareerGPS Goa is a Goa-first career pathway intelligence platform for students, graduates, working professionals and career switchers.
+NaviGoa is a Goa-first career pathway intelligence platform for students, graduates, working professionals and career switchers.
 
 ## Primary pages
 - https://careergpsgoa.in/ — Career discovery home

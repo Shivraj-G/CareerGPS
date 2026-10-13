@@ -12,7 +12,7 @@ export const generatePathwaySchema = z.object({
 export const progressSchema = z.object({
   steps: z.array(z.object({
     pathway_step_id: z.string().uuid(),
-    status: z.enum(['not_started', 'in_progress', 'completed']),
+    status: z.enum(['not_started', 'in_progress', 'completed', 'skipped', 'blocked']),
     notes: z.string().max(2000).nullable().optional()
   }).strict()).min(1)
 }).strict();

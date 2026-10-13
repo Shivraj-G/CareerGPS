@@ -1,0 +1,10 @@
+CareerGPS Profile Render + Email Fix — Test Results
+
+Full frontend Node test suite: 26 passed, 0 failed.
+Focused Profile/goal validation tests: 13 passed, 0 failed.
+JSX syntax parsing (global TypeScript transpileModule):
+  - frontend/src/main.jsx: passed
+  - frontend/src/pages/ProfilePage.jsx: passed
+  - frontend/src/components/profile/GoalFeasibilityDashboard.jsx: passed
+Vite production build: NOT VERIFIED. npm ci timed out during dependency installation in this environment.
+Live browser/database integration: NOT RUN in this environment.

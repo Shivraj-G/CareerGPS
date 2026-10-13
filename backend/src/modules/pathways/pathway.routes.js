@@ -1,7 +1,24 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate.js';
 import { generatePathwaySchema, progressSchema } from './pathway.validation.js';
-import { listPathways, getPathway, getCareerPathways, generatePathway, getUserPathway, selectPathway, selectTemplatePathway, updateProgress, savePathway, unsavePathway, listUserPathways } from './pathway.service.js';
+import {
+  listPathways,
+  getPathway,
+  getCareerPathways,
+  generatePathway,
+  getUserPathway,
+  selectPathway,
+  selectTemplatePathway,
+  updateProgress,
+  skipStep,
+  undoStep,
+  completeStep,
+  completePathway,
+  archiveUserPathway,
+  savePathway,
+  unsavePathway,
+  listUserPathways
+} from './pathway.service.js';
 
 const router = Router();
 const pagination = (req) => {
@@ -82,11 +99,66 @@ router.post('/:pathwayId/progress', authenticate, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+router.post('/:pathwayId/steps/:stepId/skip', authenticate, async (req, res, next) => {
+  try {
+    const data = await skipStep(req.user.id, req.params.pathwayId, req.params.stepId);
+    res.json({ data });
+  } catch (e) { next(e); }
+});
+
+router.post('/:pathwayId/steps/:stepId/undo', authenticate, async (req, res, next) => {
+  try {
+    const data = await undoStep(req.user.id, req.params.pathwayId, req.params.stepId);
+    res.json({ data });
+  } catch (e) { next(e); }
+});
+
+router.post('/:pathwayId/steps/:stepId/complete', authenticate, async (req, res, next) => {
+  try {
+    const data = await completeStep(req.user.id, req.params.pathwayId, req.params.stepId, req.body?.notes ?? null);
+    res.json({ data });
+  } catch (e) { next(e); }
+});
+
+router.post('/:pathwayId/complete', authenticate, async (req, res, next) => {
+  try {
+    const data = await completePathway(req.user.id, req.params.pathwayId, req.body ?? {});
+    res.json({ data });
+  } catch (e) { next(e); }
+});
+
+router.delete('/:pathwayId', authenticate, async (req, res, next) => {
+  try {
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_REGEX.test(req.params.pathwayId)) {
+      return res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'Invalid pathway identifier.' }
+      });
+    }
+
+    const removed = await archiveUserPathway(req.user.id, req.params.pathwayId);
+    if (!removed) {
+      return res.status(404).json({
+        error: { code: 'NOT_FOUND', message: 'Pathway not found or already removed.' }
+      });
+    }
+
+    res.status(200).json({ data: { removed: true, pathway_id: req.params.pathwayId } });
+  } catch (e) {
+    if (e.statusCode === 403 || e.code === 'FORBIDDEN') {
+      return res.status(403).json({
+        error: { code: 'FORBIDDEN', message: e.message || 'You do not have permission to remove this pathway.' }
+      });
+    }
+    next(e);
+  }
+});
+
 router.get('/:pathwayId/progress', authenticate, async (req, res, next) => {
   try {
     const data = await getUserPathway(req.user.id, req.params.pathwayId);
     if (!data) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Personalized pathway not found.' } });
-    res.json({ data: { user_pathway_id: data.id, status: data.status, steps: data.steps } });
+    res.json({ data: { user_pathway_id: data.id, status: data.status, steps: data.steps, metrics: data.metrics, starting_point: data.starting_point } });
   } catch (e) { next(e); }
 });
 

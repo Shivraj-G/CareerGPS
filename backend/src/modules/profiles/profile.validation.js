@@ -1,18 +1,18 @@
 import { z } from 'zod';
 
 const education = z.object({
-  level: z.string().trim().min(1).max(200).optional(),
-  stream: z.string().trim().min(1).max(200).optional(),
-  degree: z.string().trim().min(1).max(200).optional(),
-  specialization: z.string().trim().min(1).max(200).optional(),
-  diplomaField: z.string().trim().min(1).max(200).optional(),
-  qualification: z.string().trim().min(1).max(200).optional(),
-  status: z.string().trim().min(1).max(50).optional(),
+  level: z.string().trim().max(200).optional(),
+  stream: z.string().trim().max(200).optional(),
+  degree: z.string().trim().max(200).optional(),
+  specialization: z.string().trim().max(200).optional(),
+  diplomaField: z.string().trim().max(200).optional(),
+  qualification: z.string().trim().max(200).optional(),
+  status: z.string().trim().max(50).optional(),
   year: z.number().int().min(1).max(2200).optional(),
   education_stage: z.enum(['SCHOOL_12', 'HIGHER_EDUCATION', 'WORKING_PROFESSIONAL']).optional(),
   school_12_status: z.enum(['PURSUING', 'COMPLETED']).optional(),
-  school_12_stream: z.string().trim().min(1).max(200).optional(),
-  current_program: z.string().trim().min(1).max(200).optional()
+  school_12_stream: z.string().trim().max(200).optional(),
+  current_program: z.string().trim().max(200).optional()
 }).passthrough();
 
 const skill = z.object({
@@ -22,6 +22,8 @@ const skill = z.object({
 }).strict();
 
 export const profileSchema = z.object({
+  full_name: z.string().trim().max(250).nullable().optional(),
+  name: z.string().trim().max(250).nullable().optional(),
   education: z.array(education).optional(),
   skills: z.array(skill).optional(),
   experience: z.array(z.record(z.string(), z.unknown())).optional(),

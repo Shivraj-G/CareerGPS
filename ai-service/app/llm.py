@@ -51,7 +51,7 @@ def _api_key(provider: str) -> str:
 
 def model_name(provider: str) -> str:
     if provider == "gemini":
-        return _env("GEMINI_MODEL", "gemini-3.8-flash")
+        return _env("GEMINI_MODEL", "gemini-flash-latest")
     return _env("GROQ_MODEL", "openai/gpt-oss-20b")
 
 
@@ -199,9 +199,9 @@ ADAPTERS = {"gemini": _call_gemini, "groq": _call_groq}
 # ---------------------------------------------------------------------------
 
 def generate(system: str, messages: list[dict[str, Any]], *, json_mode: bool, max_tokens: int,
-             temperature: float, budget: float) -> str | None:
+             temperature: float, budget: float, provider_override: str | None = None) -> str | None:
     """Try each configured provider within a shared time budget. None on total failure."""
-    chain = provider_chain()
+    chain = [provider_override] if provider_override else provider_chain()
     if not chain:
         return None
     normalized = _normalize_messages(messages)
@@ -242,9 +242,9 @@ def parse_json_object(text: str | None) -> dict[str, Any] | None:
 
 
 def chat_json(system: str, messages: list[dict[str, Any]], *, max_tokens: int = 900,
-              temperature: float = 0.3, budget: float = 6.0) -> dict[str, Any] | None:
+              temperature: float = 0.3, budget: float = 6.0, provider_override: str | None = None) -> dict[str, Any] | None:
     text = generate(system, messages, json_mode=True, max_tokens=max_tokens,
-                    temperature=temperature, budget=budget)
+                    temperature=temperature, budget=budget, provider_override=provider_override)
     parsed = parse_json_object(text)
     if text and parsed is None:
         log.warning("llm returned non-JSON output (first 120 chars): %r", text[:120])

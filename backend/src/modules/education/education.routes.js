@@ -1,7 +1,11 @@
 import { Router } from 'express';
-import { getCompatiblePrograms, validateProgramCompatibility } from './education.service.js';
+import { getCompatiblePrograms, validateProgramCompatibility, getEligibleMasterPrograms, ALL_STREAMS } from './education.service.js';
 
 const router = Router();
+
+router.get('/streams', (req, res) => {
+  res.json({ data: ALL_STREAMS });
+});
 
 router.get('/programs', (req, res, next) => {
   try {
@@ -21,6 +25,16 @@ router.post('/validate', (req, res, next) => {
       return res.status(400).json({ error: { code: 'INVALID_EDUCATION_COMBINATION', message: `${program} is not compatible with the selected 12th stream.` } });
     }
     res.json({ data: { valid: true } });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get('/master-programs', (req, res, next) => {
+  try {
+    const bachelors = req.query.bachelors || '';
+    const programs = getEligibleMasterPrograms(bachelors);
+    res.json({ data: programs });
   } catch (e) {
     next(e);
   }

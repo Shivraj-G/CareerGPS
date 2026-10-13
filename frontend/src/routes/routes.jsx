@@ -22,6 +22,8 @@ const plannedRoutes = [
   ['/institutions', 'Institutions'],
   ['/institutions/:institutionId', 'Institution details'],
   ['/profile', 'Profile'],
+  ['/projects', 'Projects & Portfolio Studio'],
+  ['/portfolio/p/:shareSlug', 'Public Portfolio'],
   ['/assistant', 'AI assistant'],
   ['/admin', 'Admin'],
   ['/admin/sources', 'Admin sources'],

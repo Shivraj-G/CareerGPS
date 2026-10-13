@@ -5,6 +5,7 @@ from pathlib import Path
 # Must be set before `app.main` is imported anywhere, since main.py reads
 # INTERNAL_SERVICE_TOKEN at module load time via os.getenv(...).
 os.environ.setdefault("INTERNAL_SERVICE_TOKEN", "test-secret-token")
+os.environ["LLM_PROVIDER"] = "none"
 
 # Let `from app.main import app` resolve when pytest is run from the
 # ai-service/ directory (put this conftest.py at ai-service/tests/conftest.py).
