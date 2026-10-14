@@ -19,16 +19,21 @@ async function seed() {
 
   const client = await pool.connect();
   try {
-    await client.query('BEGIN');
     for (const file of files) {
       const sql = await fs.readFile(path.join(seedDir, file), 'utf8');
-      await client.query(sql);
-      console.log(`Applied seed: ${file}`);
+      await client.query('BEGIN');
+      try {
+        await client.query(sql);
+        await client.query('COMMIT');
+        console.log(`Applied seed: ${file}`);
+      } catch (error) {
+        await client.query('ROLLBACK');
+        error.seed = file;
+        throw error;
+      }
     }
-    await client.query('COMMIT');
     console.log('Seeds complete.');
   } catch (error) {
-    await client.query('ROLLBACK');
     throw error;
   } finally {
     client.release();
@@ -37,6 +42,9 @@ async function seed() {
 }
 
 seed().catch((error) => {
-  console.error('Seed failed:', error.message);
+  console.error(`Seed failed${error.seed ? ` in ${error.seed}` : ''}: ${error.message}`);
+  if (error.code) console.error(`PostgreSQL error code: ${error.code}`);
+  if (error.detail) console.error(`Detail: ${error.detail}`);
+  if (error.hint) console.error(`Hint: ${error.hint}`);
   process.exit(1);
 });

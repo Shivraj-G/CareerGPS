@@ -1,4 +1,3 @@
-BEGIN;
 
 INSERT INTO skills (name, category, record_status) VALUES
 ('Search Engine Optimization (SEO)', 'marketing', 'published'),
@@ -14,5 +13,3 @@ INSERT INTO skills (name, category, record_status) VALUES
 ('Advertising Platforms', 'marketing', 'published'),
 ('Branding', 'marketing', 'published')
 ON CONFLICT (name) DO NOTHING;
-
-COMMIT;

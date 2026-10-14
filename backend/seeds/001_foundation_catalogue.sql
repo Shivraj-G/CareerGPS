@@ -12,7 +12,6 @@
 --   Skills/careers use their natural unique keys.
 --   Sources are inserted only when the same name + base_url pair does not already exist.
 
-BEGIN;
 
 -- ---------------------------------------------------------------------------
 -- 1. Official source registry
@@ -150,5 +149,3 @@ VALUES
     'unverified'
   )
 ON CONFLICT (title) DO NOTHING;
-
-COMMIT;

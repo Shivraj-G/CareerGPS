@@ -1,4 +1,3 @@
-BEGIN;
 
 -- Add skills for Mass Communication & Media
 INSERT INTO skills (name, category, record_status) VALUES
@@ -14,7 +13,6 @@ INSERT INTO skills (name, category, record_status) VALUES
 ('Public Speaking', 'communication', 'published'),
 ('Communication', 'soft_skill', 'published')
 ON CONFLICT (name) DO NOTHING;
-
 -- Add skills for Psychology
 INSERT INTO skills (name, category, record_status) VALUES
 ('Counseling', 'psychology', 'published'),
@@ -25,7 +23,6 @@ INSERT INTO skills (name, category, record_status) VALUES
 ('Cognitive Behavioral Therapy (CBT)', 'psychology', 'published'),
 ('Psychological Testing', 'psychology', 'published')
 ON CONFLICT (name) DO NOTHING;
-
 -- Add skills for Economics
 INSERT INTO skills (name, category, record_status) VALUES
 ('Macroeconomics', 'business', 'published'),
@@ -83,4 +80,3 @@ INSERT INTO skills (name, category, record_status) VALUES
 ('Geotechnical Engineering', 'engineering', 'published')
 ON CONFLICT (name) DO NOTHING;
 
-COMMIT;

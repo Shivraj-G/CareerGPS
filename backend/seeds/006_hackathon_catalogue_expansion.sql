@@ -1,7 +1,6 @@
 -- CareerGPS hackathon catalogue expansion v1
 -- Platform-authored development data. Career and project templates are illustrative, not job vacancies or official qualification advice.
 -- Idempotent: rerunnable without duplicating catalogue rows.
-BEGIN;
 
 -- 1. Broad skill catalogue across technical and non-technical fields
 INSERT INTO skills (name, description, category, record_status) VALUES
@@ -4434,4 +4433,3 @@ WHERE NOT EXISTS (SELECT 1 FROM career_projects p WHERE p.career_title=x.career_
 
 -- 6. Compact seed audit result for migration logs / manual verification
 SELECT 'skills' AS entity, COUNT(*)::text AS total FROM skills UNION ALL SELECT 'careers', COUNT(*)::text FROM careers UNION ALL SELECT 'career_skill_links', COUNT(*)::text FROM career_skills UNION ALL SELECT 'career_pathways', COUNT(*)::text FROM pathways UNION ALL SELECT 'pathway_steps', COUNT(*)::text FROM pathway_steps UNION ALL SELECT 'career_project_templates', COUNT(*)::text FROM career_projects;
-COMMIT;

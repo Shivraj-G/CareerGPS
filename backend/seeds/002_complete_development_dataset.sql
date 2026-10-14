@@ -12,7 +12,6 @@
 --
 -- This seed is intended for DEVELOPMENT / DEMO databases, not production.
 
-BEGIN;
 
 -- ---------------------------------------------------------------------------
 -- 0. Sources
@@ -310,8 +309,12 @@ ON CONFLICT (pathway_id,step_order) DO UPDATE SET title=EXCLUDED.title,descripti
 -- ---------------------------------------------------------------------------
 -- 10. Official Government of Goa recruitment listings visible on current page
 -- ---------------------------------------------------------------------------
-INSERT INTO opportunities(title,organization,opportunity_type,location,advertisement_number,application_opening,application_deadline,vacancies_total,description,status,record_status,verification_status,source_id,source_url)
-SELECT x.title,x.org,'government_recruitment','Goa',x.ad,x.opening::timestamptz,x.deadline::timestamptz,NULL,x.description,CASE WHEN x.deadline IS NOT NULL AND x.deadline::date < CURRENT_DATE THEN 'closed' ELSE 'unknown' END,'published','verified',s.id,'https://www.goa.gov.in/citizen/recruitment/'
+INSERT INTO opportunities(title,organization,opportunity_type,location,advertisement_number,application_opening,application_deadline,vacancies_total,description,status,record_status,verification_status,source_id,source_url,dedup_key)
+SELECT x.title,x.org,'government_recruitment','Goa',x.ad,x.opening::timestamptz,x.deadline::timestamptz,NULL,x.description,CASE WHEN x.deadline IS NOT NULL AND x.deadline::date < CURRENT_DATE THEN 'closed' ELSE 'unknown' END,'published','verified',s.id,'https://www.goa.gov.in/citizen/recruitment/',
+  'fp:' || SUBSTRING(encode(sha256((
+    s.id::text || '::' || LOWER(TRIM(x.org)) || '::' || LOWER(TRIM(x.title)) || '::' || LOWER(TRIM('Goa')) ||
+    CASE WHEN x.opening IS NOT NULL THEN '::cycle:' || TO_CHAR(x.opening::timestamptz AT TIME ZONE 'UTC', 'YYYY-MM') ELSE '' END
+  )::bytea), 'hex') FROM 1 FOR 32)
 FROM (VALUES
 ('Recruitment for the Post of Company Secretary on Contract Basis','Goa State Scheduled Tribes Finance and Development Corporation Limited',NULL,'2026-09-11',NULL,'Listing shown on the Government of Goa recruitment page; exact closing details are in the notice.'),
 ('Walk-in Interview – Recruitment for Assistant Professor and Assistant Professor (Farm Manager)','Goa College of Agriculture',NULL,'2026-09-22','2026-10-05','Listing shown on the Government of Goa recruitment page with last date 05/10/2026.'),
@@ -492,7 +495,7 @@ INSERT INTO saved_items(user_id,item_type,item_id)
 SELECT u.id,x.item_type,x.item_id
 FROM (VALUES
 ('user@careergps.local','career',(SELECT id FROM careers WHERE title='Backend Developer')),
-('student2@careergps.local','pathway',(SELECT id FROM pathways WHERE title LIKE 'Full Stack Developer%')),
+('student2@careergps.local','pathway',(SELECT id FROM pathways WHERE title='Full Stack Developer — Foundations to Portfolio')),
 ('student3@careergps.local','course',(SELECT id FROM courses WHERE title='MODERN OFFICE PRACTICES' LIMIT 1)),
 ('student4@careergps.local','opportunity',(SELECT id FROM opportunities WHERE title='ADVERTISEMENT NO. 3 OF YEAR 2026' LIMIT 1))
 ) x(email,item_type,item_id) JOIN users u ON u.email=x.email WHERE x.item_id IS NOT NULL
@@ -1092,5 +1095,3 @@ INSERT INTO audit_logs(actor_user_id,action,entity_type,entity_id,before_data,af
 SELECT u.id,'SEED_DATASET_CREATED','dataset',NULL,NULL,jsonb_build_object('seed','final','environment','development'),jsonb_build_object('version','final-seed-v1','large_catalogue',TRUE)
 FROM users u WHERE u.email='admin@careergps.local'
 AND NOT EXISTS (SELECT 1 FROM audit_logs a WHERE a.action='SEED_DATASET_CREATED' AND a.actor_user_id=u.id);
-
-COMMIT;

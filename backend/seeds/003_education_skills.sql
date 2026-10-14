@@ -1,4 +1,3 @@
-BEGIN;
 
 -- Add skills for Geography and GIS
 INSERT INTO skills (name, category, record_status) VALUES
@@ -14,7 +13,6 @@ INSERT INTO skills (name, category, record_status) VALUES
 ('Environmental Studies', 'geography', 'published'),
 ('Geographic Research', 'geography', 'published')
 ON CONFLICT (name) DO NOTHING;
-
 -- Add skills for Biology
 INSERT INTO skills (name, category, record_status) VALUES
 ('Biological Sciences', 'biology', 'published'),
@@ -23,7 +21,6 @@ INSERT INTO skills (name, category, record_status) VALUES
 ('Genetics', 'biology', 'published'),
 ('Microbiology', 'biology', 'published')
 ON CONFLICT (name) DO NOTHING;
-
 -- Add skills for Commerce / Accounting
 INSERT INTO skills (name, category, record_status) VALUES
 ('Bookkeeping', 'finance', 'published'),
@@ -67,4 +64,3 @@ INSERT INTO skills (name, category, record_status) VALUES
 ('Manufacturing Processes', 'engineering', 'published')
 ON CONFLICT (name) DO NOTHING;
 
-COMMIT;
