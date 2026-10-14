@@ -4380,17 +4380,17 @@ function Opportunities() {
             <option value="Remote">Remote</option>
           </select>
         </label>
+        {hasActiveFilters && (
+          <button
+            type="button"
+            className="opp-filter-reset"
+            onClick={resetFilters}
+            title="Reset all filters"
+          >
+            <X size={12} /> Reset
+          </button>
+        )}
       </div>
-      {hasActiveFilters && (
-        <button
-          type="button"
-          className="opp-filter-reset"
-          onClick={resetFilters}
-          title="Reset all filters"
-        >
-          <X size={12} /> Reset
-        </button>
-      )}
     </div>
   );
 

@@ -4828,55 +4828,78 @@ export function Opportunities() {
   const hasActiveFilters = search.trim() !== "" || type !== "All" || statusFilter !== "All" || locationFilter !== "All";
   const isClosingSoonTab = statusFilter === "Closing Soon";
 
+  const clearSearch = () => {
+    setSearch("");
+    setPage(1);
+  };
+
   const filterBar = (
     <div className="opportunity-filter">
-      <Search size={15} />
-      <input
-        aria-label="Search opportunities"
-        value={search}
-        onChange={(e) => handleSearchChange(e.target.value)}
-        placeholder="Search by title, employer, category..."
-      />
-      <select
-        aria-label="Opportunity type"
-        value={type}
-        onChange={(e) => handleTypeChange(e.target.value)}
-      >
-        <option value="All">All types</option>
-        <option value="Government">Government</option>
-        <option value="Private Sector">Private Sector</option>
-        <option value="Internship">Internship</option>
-      </select>
-      <select
-        aria-label="Opportunity status"
-        value={statusFilter}
-        onChange={(e) => handleStatusChange(e.target.value)}
-      >
-        <option value="All">All statuses</option>
-        <option value="Open">Open</option>
-        <option value="Closing Soon">Closing soon</option>
-        <option value="Closed">Closed</option>
-      </select>
-      <select
-        aria-label="Opportunity location"
-        value={locationFilter}
-        onChange={(e) => handleLocationChange(e.target.value)}
-      >
-        <option value="All">All locations</option>
-        <option value="Goa">Goa</option>
-        <option value="Bengaluru">Bengaluru</option>
-        <option value="Remote">Remote</option>
-      </select>
-      {hasActiveFilters && (
-        <button
-          type="button"
-          className="opp-filter-reset"
-          onClick={resetFilters}
-          title="Reset all filters"
-        >
-          <X size={12} /> Reset
-        </button>
-      )}
+      <div className="opportunity-search-row">
+        <Search size={15} aria-hidden="true" />
+        <input
+          aria-label="Search opportunities"
+          value={search}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          placeholder="Search by title, employer, category…"
+        />
+        {search && (
+          <button type="button" className="opportunity-clear-search" onClick={clearSearch} aria-label="Clear opportunity search">
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      <div className="opportunity-filter-controls">
+        <label>
+          <span>Type</span>
+          <select
+            aria-label="Opportunity type"
+            value={type}
+            onChange={(e) => handleTypeChange(e.target.value)}
+          >
+            <option value="All">All types</option>
+            <option value="Government">Government</option>
+            <option value="Private Sector">Private Sector</option>
+            <option value="Internship">Internship</option>
+          </select>
+        </label>
+        <label>
+          <span>Status</span>
+          <select
+            aria-label="Opportunity status"
+            value={statusFilter}
+            onChange={(e) => handleStatusChange(e.target.value)}
+          >
+            <option value="All">All statuses</option>
+            <option value="Open">Open</option>
+            <option value="Closing Soon">Closing soon</option>
+            <option value="Closed">Closed</option>
+          </select>
+        </label>
+        <label>
+          <span>Location</span>
+          <select
+            aria-label="Opportunity location"
+            value={locationFilter}
+            onChange={(e) => handleLocationChange(e.target.value)}
+          >
+            <option value="All">All locations</option>
+            <option value="Goa">Goa</option>
+            <option value="Bengaluru">Bengaluru</option>
+            <option value="Remote">Remote</option>
+          </select>
+        </label>
+        {hasActiveFilters && (
+          <button
+            type="button"
+            className="opp-filter-reset"
+            onClick={resetFilters}
+            title="Reset all filters"
+          >
+            <X size={12} /> Reset
+          </button>
+        )}
+      </div>
     </div>
   );
 
