@@ -22,7 +22,7 @@ class MemoryStorage {
 }
 globalThis.localStorage = new MemoryStorage();
 
-const { api, getToken, setToken, clearToken, ApiError } = await import("../client.js");
+const { api, getToken, setToken, clearToken, ApiError, normalizeApiBase } = await import("../client.js");
 
 beforeEach(() => {
   localStorage.clear();
@@ -43,6 +43,14 @@ test("token helpers round-trip through localStorage", () => {
   assert.equal(getToken(), "abc.def.ghi");
   clearToken();
   assert.equal(getToken(), null);
+});
+
+test("API base URL appends exactly one /api/v1 prefix", () => {
+  assert.equal(normalizeApiBase("https://backend.example.com"), "https://backend.example.com/api/v1");
+  assert.equal(normalizeApiBase("https://backend.example.com/api/v1/"), "https://backend.example.com/api/v1");
+  assert.equal(normalizeApiBase("/api/v1"), "/api/v1");
+  assert.throws(() => normalizeApiBase("", { production: true }), /VITE_API_BASE_URL/);
+  assert.throws(() => normalizeApiBase("/api/v1", { production: true }), /HTTPS backend origin/);
 });
 
 test("a backend { error: { code, message } } response surfaces the real message and code", async () => {
@@ -117,6 +125,34 @@ test("login() sends credentials to /auth/login and returns the parsed body as-is
   assert.match(capturedUrl, /\/auth\/login$/);
   assert.deepEqual(capturedBody, { email: "a@b.com", password: "secret123" });
   assert.equal(res.accessToken, "tok123");
+});
+
+test("register() sends POST to /api/v1/auth/register with the backend payload", async () => {
+  let capturedUrl = null;
+  let capturedOptions = null;
+  globalThis.fetch = async (url, options) => {
+    capturedUrl = url;
+    capturedOptions = options;
+    return jsonResponse(201, { user: { id: "u1" }, accessToken: "tok123" });
+  };
+  await api.register({ email: "new@example.com", password: "secret123", full_name: "New User" });
+  assert.match(capturedUrl, /\/api\/v1\/auth\/register$/);
+  assert.equal(capturedOptions.method, "POST");
+  assert.deepEqual(JSON.parse(capturedOptions.body), {
+    email: "new@example.com",
+    password: "secret123",
+    full_name: "New User"
+  });
+});
+
+test("405 responses receive a useful safe error message", async () => {
+  globalThis.fetch = async () => jsonResponse(405, { error: { code: "METHOD_NOT_ALLOWED", message: "Method not allowed." } });
+  await assert.rejects(() => api.register({ email: "new@example.com", password: "secret123" }), (err) => {
+    assert.equal(err.status, 405);
+    assert.equal(err.code, "METHOD_NOT_ALLOWED");
+    assert.equal(err.message, "Method not allowed.");
+    return true;
+  });
 });
 
 test("an authenticated request attaches the stored bearer token", async () => {

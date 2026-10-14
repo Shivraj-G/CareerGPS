@@ -22,22 +22,38 @@
  * confirming they exist in the backend source first.
  */
 
-const RAW_BASE = (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_API_BASE_URL) || "/api/v1";
-// Guard against accidentally configuring VITE_API_BASE_URL with a trailing slash.
-let API_BASE = RAW_BASE.replace(/\/+$/, "");
-// If the user sets VITE_API_BASE_URL=https://careergps-production.up.railway.app without the /api/v1 suffix, automatically append it to prevent 404s.
-if (!API_BASE.endsWith("/api/v1")) {
-  API_BASE += "/api/v1";
+export function normalizeApiBase(rawBase, { production = false } = {}) {
+  const configured = String(rawBase || "").trim();
+  if (!configured) {
+    if (production) {
+      throw new Error("VITE_API_BASE_URL must be configured for a production build.");
+    }
+    return "/api/v1";
+  }
+
+  if (production && !/^https:\/\//i.test(configured)) {
+    throw new Error("VITE_API_BASE_URL must be an HTTPS backend origin in production.");
+  }
+
+  // The supported value is the backend origin. Accepting an already-suffixed
+  // value keeps existing deployments safe while still composing the prefix once.
+  const withoutTrailingSlash = configured.replace(/\/+$/, "");
+  return withoutTrailingSlash.endsWith("/api/v1")
+    ? withoutTrailingSlash
+    : `${withoutTrailingSlash}/api/v1`;
 }
+
+const viteEnv = (typeof import.meta !== "undefined" && import.meta.env) || {};
+const API_BASE = normalizeApiBase(viteEnv.VITE_API_BASE_URL, {
+  production: Boolean(viteEnv.PROD)
+});
 
 const TOKEN_KEY = "careergps_token";
 // 60 s default: AI operations (recommendations, pathway generation, career enrichment)
 // can legitimately take 20-40 s. VITE_API_TIMEOUT_MS lets deployments override this.
 // Requests still return immediately when the backend responds; this is the *maximum* wait.
 const REQUEST_TIMEOUT_MS =
-  (typeof import.meta !== "undefined" &&
-    import.meta.env &&
-    Number(import.meta.env.VITE_API_TIMEOUT_MS)) ||
+  Number(viteEnv.VITE_API_TIMEOUT_MS) ||
   60000;
 
 export function getToken() {
@@ -94,6 +110,7 @@ function fallbackMessage(status, isNetworkError) {
     case 401: return "Your session has expired. Please log in again.";
     case 403: return "You don't have permission to access this resource.";
     case 404: return "The requested resource could not be found.";
+    case 405: return "This action is not supported by the server.";
     case 400:
     case 422: return "The request contains invalid fields.";
     case 429: return "Too many requests. Please wait a moment and try again.";
