@@ -5,14 +5,22 @@ import { logger } from "./utils/logger.js";
 import { startNotificationScheduler, stopNotificationScheduler } from "./modules/notifications/notification.scheduler.js";
 
 const app = createApp();
-const host = env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1";
-const server = app.listen(env.PORT, host, () => {
+const server = app.listen(env.PORT, env.HOST, () => {
   logger.info("Backend server started", {
     port: env.PORT,
+    host: env.HOST,
     environment: env.NODE_ENV,
   });
   // Start closing-soon notification scheduler
   startNotificationScheduler();
+});
+
+server.on("error", (error) => {
+  logger.error("Backend server failed to listen", {
+    code: error.code,
+    message: error.message,
+  });
+  process.exitCode = 1;
 });
 
 async function shutdown(signal) {
