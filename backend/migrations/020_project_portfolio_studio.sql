@@ -1,6 +1,4 @@
 -- Migration 020: CareerGPS Project & Portfolio Studio
-BEGIN;
-
 -- 1. Ensure Marketing Specialist exists in careers table
 INSERT INTO careers (id, title, description, responsibilities, qualifications, entry_routes, origin, verification_status, record_status)
 VALUES (
@@ -14,7 +12,7 @@ VALUES (
   'verified',
   'published'
 )
-ON CONFLICT (id) DO UPDATE SET
+ON CONFLICT (title) DO UPDATE SET
   title = EXCLUDED.title,
   description = EXCLUDED.description;
 
@@ -136,6 +134,39 @@ CREATE INDEX IF NOT EXISTS idx_user_portfolios_share_slug ON user_portfolios(sha
 
 -- 7. Seed Curated Projects for Technical and Non-Technical Career Families
 
+-- The project catalogue is part of the migration, so it must not depend on
+-- optional development seed files. Preserve the historical UUIDs on a fresh
+-- database, while resolving by title when a populated database already has a
+-- valid career row with a different UUID.
+INSERT INTO careers (id, title, responsibilities, qualifications, entry_routes, origin, verification_status, record_status)
+SELECT v.id, v.title, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, 'curated', 'needs_review', 'needs_review'
+FROM (VALUES
+  ('dd929e8c-07b1-4567-a202-384a53b6e254'::uuid, 'Backend Developer'),
+  ('2a7f4d18-6335-472c-aaef-ae9547bfc1e2'::uuid, 'AI Engineer'),
+  ('549fa435-9499-4e45-bee1-b89a13b3d64e'::uuid, 'Data Analyst'),
+  ('17e40e2c-763d-496c-8fc8-c18e40bd8ab1'::uuid, 'Assistant Professor'),
+  ('1fbc7614-cf1f-460b-b167-6eda303bb61e'::uuid, 'Doctor')
+) AS v(id, title)
+WHERE NOT EXISTS (SELECT 1 FROM careers c WHERE c.id = v.id OR c.title = v.title)
+ON CONFLICT (id) DO NOTHING;
+
+DO $$
+DECLARE
+  missing_titles TEXT;
+BEGIN
+  SELECT string_agg(v.title, ', ' ORDER BY v.title)
+  INTO missing_titles
+  FROM (VALUES
+    ('Backend Developer'), ('AI Engineer'), ('Data Analyst'),
+    ('Geo Analyst'), ('Assistant Professor'), ('Marketing Specialist'), ('Doctor')
+  ) AS v(title)
+  WHERE NOT EXISTS (SELECT 1 FROM careers c WHERE c.title = v.title);
+
+  IF missing_titles IS NOT NULL THEN
+    RAISE EXCEPTION 'Required career parents are missing: %', missing_titles;
+  END IF;
+END $$;
+
 -- Backend Developer (dd929e8c-07b1-4567-a202-384a53b6e254)
 INSERT INTO career_projects (
   id, career_id, career_title, title, slug, difficulty_level, difficulty_label,
@@ -145,7 +176,7 @@ INSERT INTO career_projects (
 ) VALUES
 (
   'e1000001-0001-4000-8000-000000000001',
-  'dd929e8c-07b1-4567-a202-384a53b6e254',
+  COALESCE((SELECT id FROM careers WHERE title = 'Backend Developer'), 'dd929e8c-07b1-4567-a202-384a53b6e254'::uuid),
   'Backend Developer',
   'Level 1 — Validated CRUD REST API Service',
   'backend-starter-crud-api',
@@ -187,7 +218,7 @@ INSERT INTO career_projects (
 ),
 (
   'e1000001-0001-4000-8000-000000000002',
-  'dd929e8c-07b1-4567-a202-384a53b6e254',
+  COALESCE((SELECT id FROM careers WHERE title = 'Backend Developer'), 'dd929e8c-07b1-4567-a202-384a53b6e254'::uuid),
   'Backend Developer',
   'Level 2 — Authenticated API with PostgreSQL, Transactions & Automated Tests',
   'backend-practical-auth-postgres-api',
@@ -230,7 +261,7 @@ INSERT INTO career_projects (
 ),
 (
   'e1000001-0001-4000-8000-000000000003',
-  'dd929e8c-07b1-4567-a202-384a53b6e254',
+  COALESCE((SELECT id FROM careers WHERE title = 'Backend Developer'), 'dd929e8c-07b1-4567-a202-384a53b6e254'::uuid),
   'Backend Developer',
   'Level 3 — Production-Ready Cloud Microservice with CI/CD & Observability',
   'backend-career-ready-cloud-service',
@@ -281,7 +312,7 @@ INSERT INTO career_projects (
 ) VALUES
 (
   'e1000002-0002-4000-8000-000000000001',
-  '2a7f4d18-6335-472c-aaef-ae9547bfc1e2',
+  COALESCE((SELECT id FROM careers WHERE title = 'AI Engineer'), '2a7f4d18-6335-472c-aaef-ae9547bfc1e2'::uuid),
   'AI Engineer',
   'Level 1 — Supervised Data Processing & Prediction Exercise',
   'ai-starter-prediction-exercise',
@@ -320,7 +351,7 @@ INSERT INTO career_projects (
 ),
 (
   'e1000002-0002-4000-8000-000000000002',
-  '2a7f4d18-6335-472c-aaef-ae9547bfc1e2',
+  COALESCE((SELECT id FROM careers WHERE title = 'AI Engineer'), '2a7f4d18-6335-472c-aaef-ae9547bfc1e2'::uuid),
   'AI Engineer',
   'Level 2 — ML Application with Evaluation & Experiment Tracking',
   'ai-practical-ml-evaluation-pipeline',
@@ -359,7 +390,7 @@ INSERT INTO career_projects (
 ),
 (
   'e1000002-0002-4000-8000-000000000003',
-  '2a7f4d18-6335-472c-aaef-ae9547bfc1e2',
+  COALESCE((SELECT id FROM careers WHERE title = 'AI Engineer'), '2a7f4d18-6335-472c-aaef-ae9547bfc1e2'::uuid),
   'AI Engineer',
   'Level 3 — Production AI Application with RAG, Monitoring & Demonstrable Interface',
   'ai-career-ready-rag-app',
@@ -410,7 +441,7 @@ INSERT INTO career_projects (
 ) VALUES
 (
   'e1000003-0003-4000-8000-000000000001',
-  '549fa435-9499-4e45-bee1-b89a13b3d64e',
+  COALESCE((SELECT id FROM careers WHERE title = 'Data Analyst'), '549fa435-9499-4e45-bee1-b89a13b3d64e'::uuid),
   'Data Analyst',
   'Level 1 — Exploratory Dataset Analysis & Executive Insights Memo',
   'data-starter-eda-insights',
@@ -449,7 +480,7 @@ INSERT INTO career_projects (
 ),
 (
   'e1000003-0003-4000-8000-000000000002',
-  '549fa435-9499-4e45-bee1-b89a13b3d64e',
+  COALESCE((SELECT id FROM careers WHERE title = 'Data Analyst'), '549fa435-9499-4e45-bee1-b89a13b3d64e'::uuid),
   'Data Analyst',
   'Level 2 — Interactive BI Dashboard with Power BI, Tableau or Looker Studio',
   'data-practical-bi-dashboard',
@@ -490,7 +521,7 @@ INSERT INTO career_projects (
 ),
 (
   'e1000003-0003-4000-8000-000000000003',
-  '549fa435-9499-4e45-bee1-b89a13b3d64e',
+  COALESCE((SELECT id FROM careers WHERE title = 'Data Analyst'), '549fa435-9499-4e45-bee1-b89a13b3d64e'::uuid),
   'Data Analyst',
   'Level 3 — End-to-End Analytics Capstone: SQL Extraction, Statistical EDA & Strategic Recommendations',
   'data-career-ready-analytics-capstone',
@@ -541,7 +572,7 @@ INSERT INTO career_projects (
 ) VALUES
 (
   'e1000004-0004-4000-8000-000000000001',
-  '5b71c777-6a12-4f11-9a7c-3f20d58be101',
+  COALESCE((SELECT id FROM careers WHERE title = 'Geo Analyst'), '5b71c777-6a12-4f11-9a7c-3f20d58be101'::uuid),
   'Geo Analyst',
   'Level 1 — Publication-Ready Thematic Map & Cartographic Layout',
   'geo-starter-thematic-map',
@@ -581,7 +612,7 @@ INSERT INTO career_projects (
 ),
 (
   'e1000004-0004-4000-8000-000000000002',
-  '5b71c777-6a12-4f11-9a7c-3f20d58be101',
+  COALESCE((SELECT id FROM careers WHERE title = 'Geo Analyst'), '5b71c777-6a12-4f11-9a7c-3f20d58be101'::uuid),
   'Geo Analyst',
   'Level 2 — Multi-Criteria GIS Suitability Analysis & Documented Methodology',
   'geo-practical-suitability-analysis',
@@ -622,7 +653,7 @@ INSERT INTO career_projects (
 ),
 (
   'e1000004-0004-4000-8000-000000000003',
-  '5b71c777-6a12-4f11-9a7c-3f20d58be101',
+  COALESCE((SELECT id FROM careers WHERE title = 'Geo Analyst'), '5b71c777-6a12-4f11-9a7c-3f20d58be101'::uuid),
   'Geo Analyst',
   'Level 3 — Geospatial Case Study: Satellite Remote Sensing, PostGIS & Interactive Web-GIS',
   'geo-career-ready-remote-sensing-postgis',
@@ -673,7 +704,7 @@ INSERT INTO career_projects (
 ) VALUES
 (
   'e1000005-0005-4000-8000-000000000001',
-  '17e40e2c-763d-496c-8fc8-c18e40bd8ab1',
+  COALESCE((SELECT id FROM careers WHERE title = 'Assistant Professor'), '17e40e2c-763d-496c-8fc8-c18e40bd8ab1'::uuid),
   'Assistant Professor',
   'Level 1 — Outcome-Based Lesson Plan & Learning Objectives Design',
   'academic-starter-lesson-plan',
@@ -712,7 +743,7 @@ INSERT INTO career_projects (
 ),
 (
   'e1000005-0005-4000-8000-000000000002',
-  '17e40e2c-763d-496c-8fc8-c18e40bd8ab1',
+  COALESCE((SELECT id FROM careers WHERE title = 'Assistant Professor'), '17e40e2c-763d-496c-8fc8-c18e40bd8ab1'::uuid),
   'Assistant Professor',
   'Level 2 — Course Module Sequence, Grading Rubric & Sample Teaching Materials',
   'academic-practical-course-sequence',
@@ -752,7 +783,7 @@ INSERT INTO career_projects (
 ),
 (
   'e1000005-0005-4000-8000-000000000003',
-  '17e40e2c-763d-496c-8fc8-c18e40bd8ab1',
+  COALESCE((SELECT id FROM careers WHERE title = 'Assistant Professor'), '17e40e2c-763d-496c-8fc8-c18e40bd8ab1'::uuid),
   'Assistant Professor',
   'Level 3 — Academic Teaching Dossier, Statement of Philosophy & Research Evidence',
   'academic-career-ready-teaching-portfolio',
@@ -802,7 +833,7 @@ INSERT INTO career_projects (
 ) VALUES
 (
   'e1000006-0006-4000-8000-000000000001',
-  '3f78a101-7b19-4d62-811c-19d45e092100',
+  COALESCE((SELECT id FROM careers WHERE title = 'Marketing Specialist'), '3f78a101-7b19-4d62-811c-19d45e092100'::uuid),
   'Marketing Specialist',
   'Level 1 — Comprehensive Campaign Brief for a Targeted Audience',
   'marketing-starter-campaign-brief',
@@ -840,7 +871,7 @@ INSERT INTO career_projects (
 ),
 (
   'e1000006-0006-4000-8000-000000000002',
-  '3f78a101-7b19-4d62-811c-19d45e092100',
+  COALESCE((SELECT id FROM careers WHERE title = 'Marketing Specialist'), '3f78a101-7b19-4d62-811c-19d45e092100'::uuid),
   'Marketing Specialist',
   'Level 2 — Multi-Channel Digital Campaign with Creative Assets & Channel Matrix',
   'marketing-practical-multichannel-campaign',
@@ -880,7 +911,7 @@ INSERT INTO career_projects (
 ),
 (
   'e1000006-0006-4000-8000-000000000003',
-  '3f78a101-7b19-4d62-811c-19d45e092100',
+  COALESCE((SELECT id FROM careers WHERE title = 'Marketing Specialist'), '3f78a101-7b19-4d62-811c-19d45e092100'::uuid),
   'Marketing Specialist',
   'Level 3 — End-to-End Marketing Strategy & Growth Case Study',
   'marketing-career-ready-growth-case-study',
@@ -929,7 +960,7 @@ INSERT INTO career_projects (
 ) VALUES
 (
   'e1000007-0007-4000-8000-000000000001',
-  '1fbc7614-cf1f-460b-b167-6eda303bb61e',
+  COALESCE((SELECT id FROM careers WHERE title = 'Doctor'), '1fbc7614-cf1f-460b-b167-6eda303bb61e'::uuid),
   'Doctor',
   'Level 1 — Structured Clinical Case History & Differential Diagnosis Exercise',
   'clinical-starter-case-history',
@@ -967,4 +998,3 @@ INSERT INTO career_projects (
   'verified'
 );
 
-COMMIT;

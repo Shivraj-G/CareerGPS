@@ -1,5 +1,3 @@
-BEGIN;
-
 -- Extend the existing skills table
 ALTER TABLE skills 
   ADD COLUMN IF NOT EXISTS parent_domain VARCHAR(150),
@@ -38,4 +36,3 @@ CREATE INDEX IF NOT EXISTS idx_skills_parent_domain ON skills(parent_domain);
 CREATE INDEX IF NOT EXISTS idx_skill_aliases_name ON skill_aliases(alias_name);
 CREATE INDEX IF NOT EXISTS idx_skill_education_mapping ON skill_education_mappings(degree_name, specialization);
 
-COMMIT;

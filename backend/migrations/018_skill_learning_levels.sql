@@ -1,5 +1,3 @@
-BEGIN;
-
 -- 1. Add learning_level and learning_metadata to skills
 ALTER TABLE skills 
   ADD COLUMN IF NOT EXISTS learning_level VARCHAR(20) DEFAULT 'intermediate' CHECK (learning_level IN ('foundational', 'intermediate', 'advanced')),
@@ -69,4 +67,3 @@ UPDATE skills SET learning_level = 'advanced' WHERE name IN (
   'Research methods in psychology', 'Grant Writing', 'Litigation Strategy', 'Microservices'
 );
 
-COMMIT;

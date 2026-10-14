@@ -8,7 +8,11 @@ const migrationsDir = path.resolve(__dirname, '../migrations');
 
 async function migrate() {
   const client = await pool.connect();
+  let lockAcquired = false;
   try {
+    await client.query("SELECT pg_advisory_lock(hashtext('careergps:migrations'))");
+    lockAcquired = true;
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         version VARCHAR(255) PRIMARY KEY,
@@ -36,18 +40,25 @@ async function migrate() {
         console.log(`Applied migration: ${file}`);
       } catch (error) {
         await client.query('ROLLBACK');
+        error.migration = file;
         throw error;
       }
     }
 
     console.log('Migrations complete.');
   } finally {
+    if (lockAcquired) {
+      await client.query("SELECT pg_advisory_unlock(hashtext('careergps:migrations'))");
+    }
     client.release();
     await pool.end();
   }
 }
 
 migrate().catch((error) => {
-  console.error('Migration failed:', error.message);
+  console.error(`Migration failed${error.migration ? ` in ${error.migration}` : ''}: ${error.message}`);
+  if (error.code) console.error(`PostgreSQL error code: ${error.code}`);
+  if (error.detail) console.error(`Detail: ${error.detail}`);
+  if (error.hint) console.error(`Hint: ${error.hint}`);
   process.exit(1);
 });
