@@ -11,19 +11,28 @@ async function callAi(payload) {
   try {
     const headers = { 'content-type': 'application/json' };
     if (env.INTERNAL_SERVICE_TOKEN) headers['x-internal-service-token'] = env.INTERNAL_SERVICE_TOKEN;
-    const response = await fetch(`${env.AI_SERVICE_URL}/internal/v1/assistant/answer`, {
+    const serviceUrl = env.AI_SERVICE_URL.replace(/\/+$/, '');
+    const response = await fetch(`${serviceUrl}/internal/v1/assistant/answer`, {
       method: 'POST', headers, body: JSON.stringify(payload), signal: controller.signal
     });
     if (!response.ok) {
-      console.error(`[assistant] AI service returned HTTP ${response.status}`);
+      console.error('[assistant] AI service returned an unsuccessful response', {
+        status: response.status,
+        category: response.status === 401 ? 'authentication' : response.status >= 500 ? 'service' : 'request'
+      });
       return null;
     }
-    return await response.json();
+    const result = await response.json();
+    if (!result || typeof result !== 'object' || typeof result.answer !== 'string' || !result.answer.trim()) {
+      console.error('[assistant] AI service returned an invalid response shape');
+      return null;
+    }
+    return result;
   } catch (err) {
     if (err.name === 'AbortError') {
       console.error('[assistant] AI service request timed out after 15s');
     } else {
-      console.error('[assistant] AI service unreachable:', err.message);
+      console.error('[assistant] AI service unreachable', { category: 'network' });
     }
     return null;
   } finally {

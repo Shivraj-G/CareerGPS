@@ -226,3 +226,19 @@ def test_gap_analysis_no_required_skills_recorded_for_career():
     }
     resp = client.post("/internal/v1/skills/gap-analysis", json=payload, headers=HEADERS)
     assert "No structured skill requirements are recorded" in resp.json()["explanation"]
+
+
+def test_assistant_without_an_llm_returns_honest_catalogue_guidance():
+    resp = client.post(
+        "/internal/v1/assistant/answer",
+        json={
+            "question": "What is a career I did not search for?",
+            "context": {"profile": None, "careers": [], "opportunities": [], "pathways": [], "courses": [], "history": []},
+        },
+        headers=HEADERS,
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["citations"] == []
+    assert "couldn't find a matching verified" in body["answer"].lower()
+    assert "currently unavailable" not in body["answer"].lower()

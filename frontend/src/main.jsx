@@ -365,6 +365,22 @@ function LoadingState({ label = "Loading...", layout }) {
         ))}
       </div>
     );
+  if (layout === "opportunity")
+    return (
+      <div className="opportunity-list opportunity-skeleton-list" aria-label="Loading opportunities">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="opportunity-skeleton-card" aria-hidden="true">
+            <div className="skeleton opportunity-skeleton-logo" />
+            <div className="opportunity-skeleton-content">
+              <div className="skeleton skel-pill" />
+              <div className="skeleton skel-title" />
+              <div className="skeleton skel-text" />
+              <div className="skeleton skel-meta" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   if (layout === "grid")
     return (
       <div className="institution-grid" style={{ marginBottom: "20px" }}>
@@ -603,6 +619,9 @@ function AssistantWidget() {
         message: text,
       });
       const data = unwrapObject(res);
+      if (!data?.conversation_id || !data?.message?.content) {
+        throw new Error("The assistant returned an invalid response. Please try again.");
+      }
       console.debug("[NaviGoa Assistant]", {
         conversationId: data.conversation_id,
         requestStatus: "success",
@@ -624,6 +643,8 @@ function AssistantWidget() {
       else if (err.status === 404) msg = "Conversation not found.";
       else if (err.status === 429)
         msg = "Too many requests. Please try again shortly.";
+      else if (err.status === 503)
+        msg = err.message || "The assistant service is temporarily unavailable. Please try again shortly.";
       else if (err.status >= 500)
         msg = "NaviGoa couldn't process that request. Please try again.";
       else if (err.message) msg = err.message;
@@ -832,11 +853,18 @@ function AssistantWidget() {
                 </div>
               )}
               <div className="assistant-input-row">
-                <input
+                <textarea
+                  rows="1"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && send()}
-                  placeholder="Ask something..."
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      send();
+                    }
+                  }}
+                  aria-label="Message NaviGoa Assistant"
+                  placeholder="Ask something…"
                   disabled={sending}
                 />
                 <button
@@ -4189,6 +4217,7 @@ function Opportunities() {
   const [type, setType] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [locationFilter, setLocationFilter] = useState("All");
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -4249,8 +4278,12 @@ function Opportunities() {
   };
 
   useEffect(() => {
-    load(search, type, statusFilter, locationFilter, page);
+    const delay = search.trim() ? 260 : 0;
+    const timer = window.setTimeout(() => {
+      load(search, type, statusFilter, locationFilter, page);
+    }, delay);
     return () => {
+      window.clearTimeout(timer);
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -4286,47 +4319,68 @@ function Opportunities() {
   };
 
   const hasActiveFilters = search.trim() !== "" || type !== "All" || statusFilter !== "All" || locationFilter !== "All";
+  const activeFilterCount = [Boolean(search.trim()), type !== "All", statusFilter !== "All", locationFilter !== "All"]
+    .filter(Boolean).length;
   const isClosingSoonTab = statusFilter === "Closing Soon";
 
+  const clearSearch = () => {
+    setSearch("");
+    setPage(1);
+  };
+
   const filterBar = (
-    <div className="opportunity-filter">
-      <Search size={15} />
-      <input
-        aria-label="Search opportunities"
-        value={search}
-        onChange={(e) => handleSearchChange(e.target.value)}
-        placeholder="Search by title, employer, category..."
-      />
-      <select
-        aria-label="Opportunity type"
-        value={type}
-        onChange={(e) => handleTypeChange(e.target.value)}
+    <div className={`opportunity-filter ${mobileFiltersOpen ? "is-open" : ""}`}>
+      <div className="opportunity-search-row">
+        <Search size={15} aria-hidden="true" />
+        <input
+          aria-label="Search opportunities"
+          value={search}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          placeholder="Search by title, employer, category…"
+        />
+        {search && (
+          <button type="button" className="opportunity-clear-search" onClick={clearSearch} aria-label="Clear opportunity search">
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      <button
+        type="button"
+        className="mobile-filter-toggle"
+        aria-expanded={mobileFiltersOpen}
+        onClick={() => setMobileFiltersOpen((open) => !open)}
       >
-        <option value="All">All types</option>
-        <option value="Government">Government</option>
-        <option value="Private Sector">Private Sector</option>
-        <option value="Internship">Internship</option>
-      </select>
-      <select
-        aria-label="Opportunity status"
-        value={statusFilter}
-        onChange={(e) => handleStatusChange(e.target.value)}
-      >
-        <option value="All">All statuses</option>
-        <option value="Open">Open</option>
-        <option value="Closing Soon">Closing soon</option>
-        <option value="Closed">Closed</option>
-      </select>
-      <select
-        aria-label="Opportunity location"
-        value={locationFilter}
-        onChange={(e) => handleLocationChange(e.target.value)}
-      >
-        <option value="All">All locations</option>
-        <option value="Goa">Goa</option>
-        <option value="Bengaluru">Bengaluru</option>
-        <option value="Remote">Remote</option>
-      </select>
+        <SlidersHorizontal size={14} /> Filters{activeFilterCount ? ` (${activeFilterCount})` : ""}
+      </button>
+      <div className="opportunity-filter-controls">
+        <label>
+          <span>Type</span>
+          <select aria-label="Opportunity type" value={type} onChange={(e) => handleTypeChange(e.target.value)}>
+            <option value="All">All types</option>
+            <option value="Government">Government</option>
+            <option value="Private Sector">Private Sector</option>
+            <option value="Internship">Internship</option>
+          </select>
+        </label>
+        <label>
+          <span>Status</span>
+          <select aria-label="Opportunity status" value={statusFilter} onChange={(e) => handleStatusChange(e.target.value)}>
+            <option value="All">All statuses</option>
+            <option value="Open">Open</option>
+            <option value="Closing Soon">Closing soon</option>
+            <option value="Closed">Closed</option>
+          </select>
+        </label>
+        <label>
+          <span>Location</span>
+          <select aria-label="Opportunity location" value={locationFilter} onChange={(e) => handleLocationChange(e.target.value)}>
+            <option value="All">All locations</option>
+            <option value="Goa">Goa</option>
+            <option value="Bengaluru">Bengaluru</option>
+            <option value="Remote">Remote</option>
+          </select>
+        </label>
+      </div>
       {hasActiveFilters && (
         <button
           type="button"
@@ -4371,7 +4425,7 @@ function Opportunities() {
         </div>
         {filterBar}
         {status === "loading" && (
-          <LoadingState label="Loading opportunities..." layout="list" />
+          <LoadingState label="Loading opportunities..." layout="opportunity" />
         )}
         {status === "error" && (
           <ErrorState text={error?.message} status={error?.status} onRetry={() => load(search, type, statusFilter, locationFilter, page)} />
@@ -4379,6 +4433,10 @@ function Opportunities() {
         {status === "ready" &&
           (opportunities.length > 0 ? (
             <>
+              <div className="opportunity-results-summary" aria-live="polite">
+                <strong>{total}</strong> source-backed {total === 1 ? "opportunity" : "opportunities"}
+                {hasActiveFilters ? <span> matching your filters</span> : <span> available to explore</span>}
+              </div>
               <div className="opportunity-list">
                 {opportunities.map((o) => (
                   <Link
@@ -5529,6 +5587,8 @@ function AssistantPage() {
       else if (err.status === 404) msg = "Conversation not found.";
       else if (err.status === 429)
         msg = "Too many requests. Please try again shortly.";
+      else if (err.status === 503)
+        msg = err.message || "The assistant service is temporarily unavailable. Please try again shortly.";
       else if (err.status >= 500)
         msg = "NaviGoa couldn't process that request. Please try again.";
       else if (err.message) msg = err.message;
@@ -5729,7 +5789,8 @@ function AssistantPage() {
                 gap: 8,
               }}
             >
-              <input
+              <textarea
+                rows="1"
                 style={{
                   flex: 1,
                   border: "1px solid var(--line)",
@@ -5737,11 +5798,19 @@ function AssistantPage() {
                   padding: "10px 16px",
                   fontSize: 13,
                   outline: "none",
+                  resize: "none",
+                  minHeight: 40,
                 }}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && send()}
-                placeholder="Ask something..."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    send();
+                  }
+                }}
+                aria-label="Message NaviGoa Assistant"
+                placeholder="Ask something…"
                 disabled={sending}
               />
               <button

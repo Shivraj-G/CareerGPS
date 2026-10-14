@@ -19,10 +19,11 @@ export function errorHandler(err, req, res, _next) {
     user: req.user?.id
   });
 
+  const safeServiceMessage = status === 503 && (code === 'AI_SERVICE_UNAVAILABLE' || code === 'AI_SERVICE_TIMEOUT');
   res.status(status).json({
     error: {
       code,
-      message: status >= 500 ? 'An unexpected server error occurred.' : err.message,
+      message: status >= 500 && !safeServiceMessage ? 'An unexpected server error occurred.' : err.message,
       correlation_id: correlationId,
       ...(err.details ? { details: err.details } : {})
     }

@@ -188,9 +188,12 @@ export function ProjectsStudioPage() {
     setPortfolioError(null);
     try {
       const res = await api.myPortfolio();
-      const p = unwrapObject(res);
+      const envelope = unwrapObject(res);
+      const p = envelope.portfolio
+        ? { ...envelope.portfolio, projects: envelope.projects || [], demonstrated_skills: envelope.demonstrated_skills || [] }
+        : envelope;
       setPortfolio(p);
-      setPortHeadline(p.headline || '');
+      setPortHeadline(p.professional_title || p.headline || '');
       setPortBio(p.bio || '');
       setPortIsPublic(!!p.is_public);
       setPortGithub(p.social_links?.github || '');
@@ -294,8 +297,9 @@ export function ProjectsStudioPage() {
         featuredProjectIds
       };
       const res = await api.updateMyPortfolio(payload);
-      const updated = res.data;
-      setPortfolio(updated);
+      const envelope = res.data || res;
+      const updated = envelope.portfolio || envelope;
+      setPortfolio((current) => ({ ...current, ...updated }));
       setPortfolioSuccessMsg('Portfolio settings saved successfully!');
       setTimeout(() => setPortfolioSuccessMsg(''), 4000);
     } catch (err) {

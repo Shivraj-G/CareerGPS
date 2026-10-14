@@ -292,7 +292,7 @@ export const api = {
 
   // --- Opportunities (src/modules/opportunities + eligibility/opportunity-requirement, public) ---
   // GET /opportunities query: search, status, opportunity_type, location, career_id, page, limit
-  opportunities: (params = {}) => get(`/opportunities${buildQuery(params)}`),
+  opportunities: (params = {}, opts = {}) => get(`/opportunities${buildQuery(params)}`, opts),
   opportunity: (id) => get(`/opportunities/${id}`),
   opportunityRequirements: (id) => get(`/opportunities/${id}/requirements`),
 

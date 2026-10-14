@@ -115,6 +115,19 @@ test("opportunities() builds the query string and hits the real path, dropping e
   assert.doesNotMatch(capturedUrl, /status=/);
 });
 
+test("opportunities() forwards an abort signal so stale filter requests can be cancelled", async () => {
+  let capturedSignal = null;
+  globalThis.fetch = (_url, options) => new Promise((_resolve, reject) => {
+    capturedSignal = options.signal;
+    options.signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
+  });
+  const controller = new AbortController();
+  const request = api.opportunities({}, { signal: controller.signal });
+  controller.abort();
+  await assert.rejects(request, (err) => err.code === "CANCELLED");
+  assert.equal(capturedSignal.aborted, true);
+});
+
 test("login() sends credentials to /auth/login and returns the parsed body as-is (no data wrapper)", async () => {
   let capturedUrl = null, capturedBody = null;
   globalThis.fetch = async (url, opts) => {

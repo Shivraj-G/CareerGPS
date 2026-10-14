@@ -1,1 +1,6 @@
-async function run() { try { const res = await fetch('https://careergps-9z6g.onrender.com/internal/v1/llm/ping', { headers: { 'x-internal-service-token': '246faeb20c364ac79f47fb3d0d0c18bae62b6e154fe12dd74db5bba0232b5aafa2f6f1f93219741963a37b724d4201c29a2e83f26f218e4216eca270237e145a' } }); console.log('STATUS:', res.status); const data = await res.text(); console.log('BODY:', data); } catch(e) { console.error('ERROR:', e.message); } } run();
+const serviceUrl = (process.env.AI_SERVICE_URL || 'https://careergps-nc6z.onrender.com').replace(/\/+$/, '');
+const serviceToken = process.env.INTERNAL_SERVICE_TOKEN;
+if (!serviceToken) throw new Error('Set INTERNAL_SERVICE_TOKEN before running this diagnostic.');
+const response = await fetch(`${serviceUrl}/internal/v1/llm/ping`, { headers: { 'x-internal-service-token': serviceToken } });
+console.log('STATUS:', response.status);
+console.log('BODY:', await response.text());

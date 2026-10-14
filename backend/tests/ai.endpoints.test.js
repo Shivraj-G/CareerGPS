@@ -210,6 +210,7 @@ describe('AI Endpoints', () => {
         json: async () => ({ answer: 'Use the verified career catalogue.', citations: [] })
       });
       pool.query.mockImplementation(async (sql) => {
+        if (sql.includes('FROM users')) return { rows: [{ id: 'assistant-user', role: 'student', account_status: 'active' }] };
         if (sql.includes('INSERT INTO conversations')) return { rows: [{ id: '123e4567-e89b-42d3-a456-426614174000' }] };
         if (sql.includes("role, content, citations") && sql.includes('RETURNING')) {
           return { rows: [{ id: 'message-1', role: 'assistant', content: 'Use the verified career catalogue.', citations: [], created_at: new Date().toISOString() }] };
@@ -236,6 +237,7 @@ describe('AI Endpoints', () => {
     it('returns a service error instead of rendering an outage as an assistant answer', async () => {
       global.fetch.mockRejectedValueOnce(new Error('AI service unavailable'));
       pool.query.mockImplementation(async (sql) => {
+        if (sql.includes('FROM users')) return { rows: [{ id: 'assistant-user-2', role: 'student', account_status: 'active' }] };
         if (sql.includes('INSERT INTO conversations')) return { rows: [{ id: '123e4567-e89b-42d3-a456-426614174000' }] };
         return { rows: [] };
       });

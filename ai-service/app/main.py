@@ -1074,7 +1074,13 @@ def _deterministic_assistant(question: str, context: dict[str, Any]) -> dict[str
         answer = "Based on the published career records matching your question:\n" + "\n".join(f"- {x.get('title')}" for x in items)
         citations = [_citation(x, "career") for x in items]
     else:
-        answer = "I'm sorry, I cannot process your request right now. The AI service is currently unavailable. Please check the structured pages for careers, pathways, courses, and opportunities."
+        # The internal service is still healthy even when every configured LLM
+        # provider is unavailable. Return a useful, honest catalogue response
+        # instead of a successful HTTP response containing outage copy. Node
+        # reserves 503 for a genuinely unreachable/invalid AI service response.
+        answer = ("I couldn't find a matching verified CareerGPS record for that question. "
+                  "Try asking about a specific career, course, pathway, or opportunity, "
+                  "or browse the structured pages for the latest source-backed information.")
         citations = []
     return {"answer": answer, "citations": citations, "grounded": bool(citations), "ai_generated": False}
 
