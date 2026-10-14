@@ -1,32 +1,32 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true
-      }
-    }
+      "/api": {
+        target: "https://careergps-1.onrender.com",
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     sourcemap: false,
-    minify: 'esbuild',
-    cssMinify: 'esbuild',
+    minify: "esbuild",
+    cssMinify: "esbuild",
     reportCompressedSize: true,
     chunkSizeWarningLimit: 350,
     rollupOptions: {
       output: {
         manualChunks: {
-          react: ['react', 'react-dom', 'react-router-dom'],
-          icons: ['lucide-react']
-        }
-      }
-    }
+          react: ["react", "react-dom", "react-router-dom"],
+          icons: ["lucide-react"],
+        },
+      },
+    },
   },
   esbuild: {
-    legalComments: 'none'
-  }
-})
+    legalComments: "none",
+  },
+});
