@@ -120,7 +120,7 @@ router.post('/gap-analysis', authenticate, async (req, res, next) => {
     const { target_career_id, target_ai_career_id } = gapSchema.parse(req.body);
     let data;
     if (target_career_id) {
-      let career = await pool.query(`SELECT id, title FROM careers WHERE id = $1 AND record_status = 'published'`, [target_career_id]);
+      let career = await pool.query(`SELECT id, title FROM careers WHERE id = $1 AND record_status IN ('published', 'needs_review')`, [target_career_id]);
       if (!career.rows[0]) {
         const aiCareer = await pool.query(`SELECT id, title FROM ai_career_profiles WHERE id = $1 AND status <> 'archived'`, [target_career_id]);
         if (!aiCareer.rows[0]) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Career not found.' } });

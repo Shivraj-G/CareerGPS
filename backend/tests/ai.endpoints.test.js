@@ -202,4 +202,52 @@ describe('AI Endpoints', () => {
       expect(res.body.data).toEqual([]); // Non-catalogue skills are dropped
     });
   });
+
+  describe('POST /api/v1/assistant/chat', () => {
+    it('persists and returns a real AI-service answer', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ answer: 'Use the verified career catalogue.', citations: [] })
+      });
+      pool.query.mockImplementation(async (sql) => {
+        if (sql.includes('INSERT INTO conversations')) return { rows: [{ id: '123e4567-e89b-42d3-a456-426614174000' }] };
+        if (sql.includes("role, content, citations") && sql.includes('RETURNING')) {
+          return { rows: [{ id: 'message-1', role: 'assistant', content: 'Use the verified career catalogue.', citations: [], created_at: new Date().toISOString() }] };
+        }
+        return { rows: [] };
+      });
+
+      const res = await request(app)
+        .post('/api/v1/assistant/chat')
+        .set('Authorization', `Bearer ${makeToken('assistant-user')}`)
+        .send({ message: 'What careers can I explore?' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.message.content).toContain('verified career catalogue');
+      expect(global.fetch).toHaveBeenCalledWith(
+        'http://ai-service/internal/v1/assistant/answer',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({ 'x-internal-service-token': process.env.INTERNAL_SERVICE_TOKEN })
+        })
+      );
+    });
+
+    it('returns a service error instead of rendering an outage as an assistant answer', async () => {
+      global.fetch.mockRejectedValueOnce(new Error('AI service unavailable'));
+      pool.query.mockImplementation(async (sql) => {
+        if (sql.includes('INSERT INTO conversations')) return { rows: [{ id: '123e4567-e89b-42d3-a456-426614174000' }] };
+        return { rows: [] };
+      });
+
+      const res = await request(app)
+        .post('/api/v1/assistant/chat')
+        .set('Authorization', `Bearer ${makeToken('assistant-user-2')}`)
+        .send({ message: 'Tell me about pathways' });
+
+      expect(res.status).toBe(503);
+      expect(res.body.error.code).toBe('AI_SERVICE_UNAVAILABLE');
+      expect(res.body.error.message).not.toMatch(/stack|fetch|token/i);
+    });
+  });
 });

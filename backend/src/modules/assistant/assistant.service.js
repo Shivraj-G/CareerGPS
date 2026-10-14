@@ -15,8 +15,7 @@ async function callAi(payload) {
       method: 'POST', headers, body: JSON.stringify(payload), signal: controller.signal
     });
     if (!response.ok) {
-      const text = await response.text().catch(() => '');
-      console.error(`[assistant] AI service returned HTTP ${response.status}: ${text}`);
+      console.error(`[assistant] AI service returned HTTP ${response.status}`);
       return null;
     }
     return await response.json();
@@ -129,7 +128,13 @@ export async function chat(userId, input) {
   await pool.query(`INSERT INTO conversation_messages (conversation_id, role, content) VALUES ($1, 'user', $2)`, [conversationId, input.message]);
   const context = await retrieveContext(input.message, userId, conversationId);
   const ai = await callAi({ question: input.message, context });
-  const answer = ai?.answer ?? 'The assistant service is currently unavailable. Please use the structured career, pathway, course, and opportunity pages while the service is unavailable.';
+  if (!ai?.answer) {
+    const error = new Error('The assistant service is temporarily unavailable. Please try again shortly.');
+    error.statusCode = 503;
+    error.code = 'AI_SERVICE_UNAVAILABLE';
+    throw error;
+  }
+  const answer = ai.answer;
   const citations = Array.isArray(ai?.citations) ? ai.citations : [];
   const inserted = await pool.query(
     `INSERT INTO conversation_messages (conversation_id, role, content, citations) VALUES ($1, 'assistant', $2, $3) RETURNING id, role, content, citations, created_at`,

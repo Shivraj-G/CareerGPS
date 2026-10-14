@@ -79,8 +79,8 @@ export async function getUserPortfolio(userId) {
     `SELECT 
       id, career_id, career_title, title, difficulty_level, difficulty_label,
       project_type, brief, problem_statement, learning_objectives,
-      COALESCE(skills, skills_exercised, '[]'::jsonb) AS skills, deliverables, acceptance_criteria, status, reflection,
-      completed_at, verification_status, created_at, updated_at
+      COALESCE(skills_exercised, '[]'::jsonb) AS skills, deliverables, acceptance_criteria, status, reflection,
+      completed_at, NULL::text AS verification_status, created_at, updated_at
      FROM user_projects
      WHERE user_id = $1
      ORDER BY 
@@ -115,44 +115,57 @@ export async function updateUserPortfolio(userId, updateData) {
   // Ensure portfolio exists
   await getUserPortfolio(userId);
 
+  const normalized = {
+    display_name: updateData.display_name ?? updateData.displayName,
+    professional_title: updateData.professional_title ?? updateData.professionalTitle,
+    bio: updateData.bio,
+    target_career_id: updateData.target_career_id ?? updateData.targetCareerId,
+    target_career_title: updateData.target_career_title ?? updateData.targetCareerTitle,
+    contact_email: updateData.contact_email ?? updateData.contactEmail,
+    social_links: updateData.social_links ?? updateData.socialLinks,
+    is_public: updateData.is_public ?? updateData.isPublic,
+    share_slug: updateData.share_slug ?? updateData.shareSlug,
+    privacy_settings: updateData.privacy_settings ?? updateData.privacySettings
+  };
+
   const updates = [];
   const values = [];
   let idx = 1;
 
-  if (updateData.display_name !== undefined) {
+  if (normalized.display_name !== undefined) {
     updates.push(`display_name = $${idx++}`);
-    values.push(updateData.display_name.trim());
+    values.push(normalized.display_name.trim());
   }
-  if (updateData.professional_title !== undefined) {
+  if (normalized.professional_title !== undefined) {
     updates.push(`professional_title = $${idx++}`);
-    values.push(updateData.professional_title ? updateData.professional_title.trim() : null);
+    values.push(normalized.professional_title ? normalized.professional_title.trim() : null);
   }
-  if (updateData.bio !== undefined) {
+  if (normalized.bio !== undefined) {
     updates.push(`bio = $${idx++}`);
-    values.push(updateData.bio ? updateData.bio.trim() : null);
+    values.push(normalized.bio ? normalized.bio.trim() : null);
   }
-  if (updateData.target_career_id !== undefined) {
+  if (normalized.target_career_id !== undefined) {
     updates.push(`target_career_id = $${idx++}`);
-    values.push(updateData.target_career_id || null);
+    values.push(normalized.target_career_id || null);
   }
-  if (updateData.target_career_title !== undefined) {
+  if (normalized.target_career_title !== undefined) {
     updates.push(`target_career_title = $${idx++}`);
-    values.push(updateData.target_career_title ? updateData.target_career_title.trim() : null);
+    values.push(normalized.target_career_title ? normalized.target_career_title.trim() : null);
   }
-  if (updateData.contact_email !== undefined) {
+  if (normalized.contact_email !== undefined) {
     updates.push(`contact_email = $${idx++}`);
-    values.push(updateData.contact_email ? updateData.contact_email.trim().toLowerCase() : null);
+    values.push(normalized.contact_email ? normalized.contact_email.trim().toLowerCase() : null);
   }
-  if (updateData.social_links !== undefined) {
+  if (normalized.social_links !== undefined) {
     updates.push(`social_links = $${idx++}::jsonb`);
-    values.push(JSON.stringify(updateData.social_links));
+    values.push(JSON.stringify(normalized.social_links));
   }
-  if (updateData.is_public !== undefined) {
+  if (normalized.is_public !== undefined) {
     updates.push(`is_public = $${idx++}`);
-    values.push(Boolean(updateData.is_public));
+    values.push(Boolean(normalized.is_public));
   }
-  if (updateData.share_slug !== undefined && updateData.share_slug) {
-    const cleanSlug = updateData.share_slug
+  if (normalized.share_slug !== undefined && normalized.share_slug) {
+    const cleanSlug = normalized.share_slug
       .toLowerCase()
       .replace(/[^a-z0-9_-]+/g, '-')
       .replace(/^-+|-+$/g, '')
@@ -170,9 +183,9 @@ export async function updateUserPortfolio(userId, updateData) {
     updates.push(`share_slug = $${idx++}`);
     values.push(cleanSlug);
   }
-  if (updateData.privacy_settings !== undefined) {
+  if (normalized.privacy_settings !== undefined) {
     updates.push(`privacy_settings = $${idx++}::jsonb`);
-    values.push(JSON.stringify(updateData.privacy_settings));
+    values.push(JSON.stringify(normalized.privacy_settings));
   }
 
   updates.push(`updated_at = NOW()`);
@@ -223,8 +236,8 @@ export async function getPublicPortfolioBySlug(shareSlug) {
     `SELECT 
       id, career_title, title, difficulty_level, difficulty_label,
       project_type, brief, problem_statement, learning_objectives,
-      COALESCE(skills, skills_exercised, '[]'::jsonb) AS skills, deliverables, acceptance_criteria, reflection,
-      completed_at, verification_status
+      COALESCE(skills_exercised, '[]'::jsonb) AS skills, deliverables, acceptance_criteria, reflection,
+      completed_at, NULL::text AS verification_status
      FROM user_projects
      WHERE user_id = $1 AND status = 'completed'
      ORDER BY difficulty_level DESC, completed_at DESC`,
